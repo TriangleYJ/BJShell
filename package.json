@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/TriangleYJ/Beakjoon-VSC/issues"
   },
-  "homepage": "https://github.com/TriangleYJ/Beakjoon-VSC#readme"
+  "homepage": "https://github.com/TriangleYJ/Beakjoon-VSC#readme",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "dotenv": "^10.0.0",
+    "puppeteer": "^13.0.0"
+  },
+  "type": "module"
 }
