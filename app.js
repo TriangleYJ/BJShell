@@ -1,6 +1,10 @@
 import dotenv from 'dotenv'
 import puppeteer from 'puppeteer'
-dotenv.config()
+import readline from 'readline'
+import fs from 'fs'
+import path from 'path';
+dotenv.config({path: '~/VSCodeProjects/BackJ/.env'}) // env path
+const __dirname = path.resolve();
 
 const langs = {
     'C99': '0',
@@ -40,7 +44,7 @@ class Submitter {
                 document.querySelector('input[name="login_user_id"]').value = id
                 document.querySelector('input[name="login_password"]').value = pw
                 document.querySelector('#submit_button').click()
-            }, process.env.BJ_ID, process.env.BJ_PW)
+            }, this.id, this.pw)
 
             await this.page.waitForNavigation()
             let cookies = await this.page.cookies()
@@ -72,11 +76,9 @@ class Submitter {
                 document.querySelector('#submit_button').click()
             }, langs[lang_str], ans)
 
-            await this.page.waitForTimeout(1000)
             let finish = false
-            console.log("")
-            console.log("Code submited.")
-
+            console.log("[#" + qnum + "] Code submited.")
+            await this.page.waitForTimeout(1000)
 
             while(!finish){
                 await this.page.waitForTimeout(1000)
@@ -98,16 +100,69 @@ class Submitter {
 }
 
 
-//let str = ``
+const r = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+})
+let mySubmittor = null
+console.log("Your ID: " + process.env.BJ_ID)
 
-const ans1 = ``;
+r.setPrompt('BJ> ');
+r.prompt()
+r.on('line', async function(line){
+    switch(line) {
+        case 'exit':
+            if(mySubmittor) mySubmittor.logout()
+            r.close()
+            break;
+        case 'logout':
+            if(mySubmittor){
+                mySubmittor.logout()
+                mySubmittor = null
+            }
+            break
+        case 'login':
+            if(!mySubmittor){
+                mySubmittor = new Submitter(process.env.BJ_ID, process.env.BJ_PW)
+                await mySubmittor.login()
+                console.log("login Succeed!")
+            } else console.log('Already logined!');
+            break
+        case 'langs':
+            for(let i in langs) console.log(`${i}`);
+            break;
+        case 'help':
+            console.log('langs: 사용 가능한 언어를 출력합니다.');
+            console.log('exit: 프로그램을 종료합니다.');
+            console.log('login: .env 에 저장되어 있는 ID와 PW를 불러와 백준에 로그인합니다. Recapcha가 뜨는 경우 직접 풀어주셔야 합니다.')
+            console.log('submit: main이란 이름의 파일 중 상단 주석에 문제 번호 및 언어가 명시되어 있는 경우 해당 파일을 제출합니다.')
+            console.log('logout: 백준 로그아웃을 합니다.')
+            break;
+        case 's':
+        case 'submit':
+            let regx = /bj[ ]*=[ ]*({.*})/
+            let default_name = 'main'
+            const dirents = fs.readdirSync(__dirname, {withFileTypes: true})
+            const fileNames = dirents.filter(dirent => dirent.isFile()).map(dirent => dirent.name);
+            const one = fileNames.filter(x => path.parse(x).name == 'main')[0]
+            if(one){
+                const data = fs.readFileSync(path.join(__dirname, one), 'utf-8')
+                const fline = data.split(/\r?\n/)[0]
+                const regxm = regx.exec(fline)
+                try{
+                    const meta = JSON.parse(regxm[1])
+                    if(mySubmittor){
+                        await mySubmittor.submit(meta.qnum, meta.language, data)
+                    } else console.log('Not loginned!');
+                } catch(e) {
+                    console.log("invalid first line!")
+                }
+            }
+    }
+    console.log()
+    r.prompt()
+})
 
-
-(async () => {
-    const mySubmittor = new Submitter(process.env.BJ_ID, process.env.BJ_PW)
-    await mySubmittor.login();
-    await mySubmittor.submit("2557", "node.js", 'console.log("Hello World!")')
-    await mySubmittor.submit('15990', "Python 3", ans1)
-    await mySubmittor.submit("2557", "Python 3", 'print("Hello World!")')
-    await mySubmittor.logout();
-})();
+r.on('close', function() {
+    process.exit()
+})
