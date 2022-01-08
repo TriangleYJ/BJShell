@@ -7,21 +7,33 @@ dotenv.config({path: '~/VSCodeProjects/BackJ/.env'}) // env path
 const __dirname = path.resolve();
 
 const langs = {
-    'C99': '0',
-    'Go': '12',
+    'c99': '0',
+    'c': '0',
+    'go': '12',
     'node.js': '17',
-    'Python 3': '28',
-    'D': '29',
-    'Text': '58',
-    'Ruby': '68',
-    'Kotlin (JVM)': '69',
-    'PyPy3': '73',
-    'Swift': '74',
-    'C++17': '84',
-    'C++17 (Clang)': '85',
-    'C# 9.0 (.NET)': '86',
-    'Java 11': '93',
-    'Rust 2018': '94'
+    'node': '17',
+    'js': '17',
+    'python 3': '28',
+    'py': '28',
+    'python': '28',
+    'd': '29',
+    'text': '58',
+    'ruby': '68',
+    'kotlin (jvm)': '69',
+    'kotlin': '69',
+    'pypy3': '73',
+    'swift': '74',
+    'c++17': '84',
+    'c++': '84',
+    'cpp': '84',
+    'c++17 (Clang)': '85',
+    'c# 9.0 (.NET)': '86',
+    'c#': '86',
+    'csharp': '86',
+    'java 11': '93',
+    'java': '93',
+    'rust 2018': '94',
+    'rust': '94'
   }
 
 //TODO: recapcha problem
@@ -110,7 +122,8 @@ console.log("Your ID: " + process.env.BJ_ID)
 r.setPrompt('BJ> ');
 r.prompt()
 r.on('line', async function(line){
-    switch(line) {
+    let seg = line.split(" ")
+    switch(seg[0]){
         case 'exit':
             if(mySubmittor) mySubmittor.logout()
             r.close()
@@ -139,25 +152,23 @@ r.on('line', async function(line){
             console.log('logout: 백준 로그아웃을 합니다.')
             break;
         case 's':
-        case 'submit':
-            let regx = /bj[ ]*=[ ]*({.*})/
-            let default_name = 'main'
-            const dirents = fs.readdirSync(__dirname, {withFileTypes: true})
-            const fileNames = dirents.filter(dirent => dirent.isFile()).map(dirent => dirent.name);
-            const one = fileNames.filter(x => path.parse(x).name == 'main')[0]
+        case 'submit': {
+            let qnum = seg[1]
+            let lang = seg[2]
+            let dirents = fs.readdirSync(__dirname, {withFileTypes: true})
+            let fileNames = dirents.filter(dirent => dirent.isFile()).map(dirent => dirent.name);
+            let one = fileNames.filter(x => path.parse(x).name == 'main')[0]
             if(one){
                 const data = fs.readFileSync(path.join(__dirname, one), 'utf-8')
-                const fline = data.split(/\r?\n/)[0]
-                const regxm = regx.exec(fline)
-                try{
-                    const meta = JSON.parse(regxm[1])
-                    if(mySubmittor){
-                        await mySubmittor.submit(meta.qnum, meta.language, data)
-                    } else console.log('Not loginned!');
-                } catch(e) {
-                    console.log("invalid first line!")
-                }
+                if(mySubmittor){
+                    await mySubmittor.submit(qnum, lang, data)
+                } else console.log('Not loginned!');
             }
+            break;
+        }
+        default:
+            console.log('모르는 명령어입니다!');
+            break;
     }
     console.log()
     r.prompt()
