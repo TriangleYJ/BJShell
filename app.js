@@ -2,7 +2,9 @@ import dotenv from 'dotenv'
 import puppeteer from 'puppeteer'
 import readline from 'readline'
 import fs from 'fs'
-import path from 'path';
+import path from 'path'
+import {execSync, spawn} from 'child_process'
+
 dotenv.config({path: '~/VSCodeProjects/BackJ/.env'}) // env path
 const __dirname = path.resolve();
 
@@ -35,9 +37,6 @@ const langs = {
     'rust 2018': '94',
     'rust': '94'
   }
-
-//TODO: recapcha problem
-//TODO: execute in runtime
 
 class Submitter {
     constructor (id, pw){
@@ -116,13 +115,31 @@ const r = readline.createInterface({
     input: process.stdin,
     output: process.stdout
 })
+
+const getBjSetting = (qnum, lang) => {
+    const jsonFile = fs.readFileSync(path.join(__dirname, 'bj.json'), 'utf8').replace(/{qnum}/g, qnum)
+    const settings = JSON.parse(jsonFile)
+    let langOpt = settings["lang"][lang]
+    return langOpt
+}
+
 let mySubmittor = null
 console.log("Your ID: " + process.env.BJ_ID)
+
+let qnum = 0
+let lang = 0
+
+let cur_process = null
 
 r.setPrompt('BJ> ');
 r.prompt()
 r.on('line', async function(line){
+    if(line.trim() == "") return r.prompt()
     let seg = line.split(" ")
+    if(cur_process) {
+        cur_process.stdin.write(line + "\n")
+        return r.prompt()
+    }
     switch(seg[0]){
         case 'exit':
             if(mySubmittor) mySubmittor.logout()
@@ -139,38 +156,83 @@ r.on('line', async function(line){
                 mySubmittor = new Submitter(process.env.BJ_ID, process.env.BJ_PW)
                 await mySubmittor.login()
                 console.log("login Succeed!")
-            } else console.log('Already logined!');
+            } else console.log('Already logined!')
             break
         case 'langs':
             for(let i in langs) console.log(`${i}`);
-            break;
+            break
         case 'help':
-            console.log('langs: 사용 가능한 언어를 출력합니다.');
+            console.log('langs: 사용 가능한 언어를 출력합니다.')
             console.log('exit: 프로그램을 종료합니다.');
             console.log('login: .env 에 저장되어 있는 ID와 PW를 불러와 백준에 로그인합니다. Recapcha가 뜨는 경우 직접 풀어주셔야 합니다.')
             console.log('submit: main이란 이름의 파일 중 상단 주석에 문제 번호 및 언어가 명시되어 있는 경우 해당 파일을 제출합니다.')
             console.log('logout: 백준 로그아웃을 합니다.')
-            break;
+            break
+        case 'set': {
+            qnum = seg[1]
+            lang = seg[2]
+            const langOpt = getBjSetting(qnum, lang)
+            if (fs.existsSync(langOpt.target)) console.log('Target Exists! Skipping making new file...');
+            else fs.copyFileSync(langOpt.template, langOpt.target)       
+            console.log('Successfully set.')
+            break
+        }
+        case 'now': {
+            console.log(`qnum: ${qnum}, lang: ${lang}`)
+            break
+        }
+        case 'unset':
+            qnum = 0
+            lang = 0
+            console.log('Successfully Unset.')
+            break
         case 's':
         case 'submit': {
-            let qnum = seg[1]
-            let lang = seg[2]
-            let dirents = fs.readdirSync(__dirname, {withFileTypes: true})
-            let fileNames = dirents.filter(dirent => dirent.isFile()).map(dirent => dirent.name);
-            let one = fileNames.filter(x => path.parse(x).name == 'main')[0]
-            if(one){
-                const data = fs.readFileSync(path.join(__dirname, one), 'utf-8')
-                if(mySubmittor){
+            if(mySubmittor){
+                if(qnum == 0) console.log('Please add the question number and language with set command.')
+                else {
+                    const langOpt = getBjSetting(qnum, lang)
+                    const data = fs.readFileSync(langOpt.target, 'utf-8')
                     await mySubmittor.submit(qnum, lang, data)
-                } else console.log('Not loginned!');
-            }
+                    console.log();
+                }
+            } else console.log('Not loginned!')
+            break
+        }
+        case 'at':
+        case 'autotest': {
+
+            break;
+        }
+        case 't':
+        case 'test': {
+            //todo: send sigkill to child when Ctrl c
+
+            const langOpt = getBjSetting(qnum, lang)
+
+            //readline input => child_process
+            if(langOpt.compile) if(execSync(langOpt.compile) != 0) console.log('An error occured during compiling')
+
+            cur_process = spawn(...langOpt.test)
+            r.setPrompt('')
+            cur_process.on('exit', (code, signal) => {
+                cur_process = null
+                r.setPrompt('BJ> ')
+                r.prompt()
+            })
+            cur_process.stdout.on('data', data => {
+                console.log(data.toString());
+            })
+            cur_process.stderr.on('data', data => {
+                console.log(data.toString());
+            })
+            
             break;
         }
         default:
             console.log('모르는 명령어입니다!');
             break;
     }
-    console.log()
     r.prompt()
 })
 
