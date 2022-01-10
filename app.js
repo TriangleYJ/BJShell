@@ -133,6 +133,10 @@ let cur_process = null
 
 r.setPrompt('BJ> ');
 r.prompt()
+r.on('SIGINT', function(){
+    if(cur_process) cur_process.kill('SIGINT')
+    else process.emit('SIGINT')
+})
 r.on('line', async function(line){
     if(line.trim() == "") return r.prompt()
     let seg = line.split(" ")
@@ -201,13 +205,10 @@ r.on('line', async function(line){
         }
         case 'at':
         case 'autotest': {
-
             break;
         }
         case 't':
         case 'test': {
-            //todo: send sigkill to child when Ctrl c
-
             const langOpt = getBjSetting(qnum, lang)
 
             //readline input => child_process
