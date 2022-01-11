@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer'
 import readline from 'readline'
 import fs from 'fs'
 import path from 'path'
-import {execSync, spawn} from 'child_process'
+import {execSync, spawn, spawnSync} from 'child_process'
 
 dotenv.config({path: '~/VSCodeProjects/BackJ/.env'}) // env path
 const __dirname = path.resolve();
@@ -74,6 +74,34 @@ class Submitter {
         await this.browser.close()
         this.browser = null
         this.page = null
+    }
+
+    async getTest(qnum){
+        try{
+            await this.page.goto('https://www.acmicpc.net/problem/'+qnum)
+            await this.page.waitForTimeout(1000)
+            await this.page.waitForSelector('#problem-body')
+            let testset = await this.page.evaluate(() => {
+                let res = []
+                let i = 1;
+                while(true){
+                    let inputblock = document.querySelector('#sampleinput' + i)
+                    console.log("inp", input)
+                    let testinput = inputblock ? inputblock.children[1].textContent : null;
+                    let outputblock = document.querySelector('#sampleoutput' + i)
+                    let testoutput = outputblock ? outputblock.children[1].textContent : null
+                    
+                    if(!testinput && !testoutput) break
+                    res.push([testinput, testoutput])
+                    i++
+                }
+                return res
+            })
+            return testset
+        } catch (err) {
+            console.log(err)
+            await this.logout();
+        }
     }
 
     async submit(qnum, lang_str, ans){
@@ -205,29 +233,53 @@ r.on('line', async function(line){
         }
         case 'at':
         case 'autotest': {
-            break;
+            const langOpt = getBjSetting(qnum, lang)
+            if(mySubmittor){
+                if(qnum == 0) console.log('Please add the question number and language with set command.')
+                else{
+                    const langOpt = getBjSetting(qnum, lang)
+                    const testset = await mySubmittor.getTest(qnum)
+                    
+                    let success_num = 0
+                    if(langOpt.compile) if(execSync(langOpt.compile) != 0) console.log('An error occured during compiling')
+                    for(let i in testset){
+                        const result = spawnSync(...langOpt.test, {input: testset[i][0]})
+                        const actual = String(result.stdout).replace(/\r\n/g, '\n')
+                        const expected = testset[i][1].replace(/\r\n/g, '\n')
+                        console.log(`Test #${i} : ${actual == expected ? 'Passed! ✅' : 'Failed! ❌'}`)
+                        if(actual != expected) {
+                            console.log(`Expected: ${expected.trim()}`);
+                            console.log(`Actual: ${actual.trim()}`);
+                        } else success_num += 1
+                    }
+                    console.log(`${success_num} / ${testset.length} testcase passed`);
+                }
+            }
+            break
         }
         case 't':
         case 'test': {
-            const langOpt = getBjSetting(qnum, lang)
+            if(qnum == 0) console.log('Please add the question number and language with set command.')
+            else {
+                const langOpt = getBjSetting(qnum, lang)
+                //readline input => child_process
+                if(langOpt.compile) if(execSync(langOpt.compile) != 0) console.log('An error occured during compiling')
 
-            //readline input => child_process
-            if(langOpt.compile) if(execSync(langOpt.compile) != 0) console.log('An error occured during compiling')
-
-            cur_process = spawn(...langOpt.test)
-            r.setPrompt('')
-            cur_process.on('exit', (code, signal) => {
-                cur_process = null
-                r.setPrompt('BJ> ')
-                r.prompt()
-            })
-            cur_process.stdout.on('data', data => {
-                console.log(data.toString());
-            })
-            cur_process.stderr.on('data', data => {
-                console.log(data.toString());
-            })
-            
+                cur_process = spawn(...langOpt.test)
+                
+                r.setPrompt('')
+                cur_process.on('exit', (code, signal) => {
+                    cur_process = null
+                    r.setPrompt('BJ> ')
+                    r.prompt()
+                })
+                cur_process.stdout.on('data', data => {
+                    console.log(data.toString());
+                })
+                cur_process.stderr.on('data', data => {
+                    console.log(data.toString());
+                })
+            }
             break;
         }
         default:
