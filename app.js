@@ -15,6 +15,7 @@ const langs = {
     'node.js': '17',
     'node': '17',
     'js': '17',
+    'ts': '106',
     'python 3': '28',
     'py': '28',
     'python': '28',
@@ -199,6 +200,10 @@ r.on('line', async function(line){
             console.log('login: .env 에 저장되어 있는 ID와 PW를 불러와 백준에 로그인합니다. Recapcha가 뜨는 경우 직접 풀어주셔야 합니다.')
             console.log('submit: main이란 이름의 파일 중 상단 주석에 문제 번호 및 언어가 명시되어 있는 경우 해당 파일을 제출합니다.')
             console.log('logout: 백준 로그아웃을 합니다.')
+            console.log('set: 현재 문제 번호와 언어를 셋팅합니다. 예: set 1000 cpp')
+            console.log('at: 백준 문제 내의 테스트 케이스를 실행합니다. t 명령어가 정상적으로 실행되어야 합니다.')
+            console.log('t: 사용자의 인풋 값을 가지고 테스트를 실행합니다.')
+            console.log('s: submit의 약자입니다.')
             break
         case 'set': {
             qnum = seg[1]
