@@ -1,5 +1,5 @@
-import config from '../config'
-import fetch from 'node-fetch'
+import config from '@/config'
+import { get } from './fetch'
 import * as cheerio from 'cheerio';
 
 interface problem {
@@ -17,24 +17,14 @@ interface problem {
     prob: string,
     input_explain: string,
     output_explain: string,
-    testcases: { input: string, output: string }[]
-    hint: string,
+    testcases: { input: string, output: string, explain?: string }[]
+    hint?: string,
+    problem_limit?: string,
 }
 
-export async function getResponse(path: string) {
-    return fetch(config.URL + path, {
-        "headers": {
-            "user-agent": config.USER_AGENT
-        },
-        "method": "GET"
-    })
-}
-
-export async function get(url: string) {
-    return (await getResponse(url)).text()
-}
 
 export async function getProblem(qnum: number): Promise<problem> {
+    const wsr = (s: string) => s.replace(/\xA0/g, " ")
     const html = await get(`${config.PROB}${qnum}`)
     const $ = cheerio.load(html)
     const table = $('#problem-info')
@@ -47,15 +37,13 @@ export async function getProblem(qnum: number): Promise<problem> {
         solved_percent: table.find('tr:nth-child(1) > td:nth-child(6)').text(),
     }
     const testcases = []
-    for(let i = 1;; i++) {
+    for (let i = 1; ; i++) {
         const input = $(`#sampleinput${i} > pre`).text()
         const output = $(`#sampleoutput${i} > pre`).text()
-        if(input == "" && output == "") break
-        testcases.push({input: input, output: output})
+        if (input == "" && output == "") break
+        const explain = wsr($(`#sample_explain_${i}`).text())
+        testcases.push(explain ? { input: input, output: output, explain: explain } : { input: input, output: output })
     }
-
-    const wsr = (s: string) => s.replace(/\xA0/g, " ")
-
     return {
         qnum: qnum,
         title: $('#problem_title').text(),
@@ -65,6 +53,7 @@ export async function getProblem(qnum: number): Promise<problem> {
         input_explain: wsr($('#problem_input').text()).trim(),
         output_explain: wsr($('#problem_output').text()).trim(),
         testcases: testcases,
-        hint: wsr($('#problem_hint').text()).trim(),
+        hint: wsr($('#problem_hint').text()).trim() || undefined,
+        problem_limit: wsr($('#problem_limit').text()).trim() || undefined,
     }
 }
