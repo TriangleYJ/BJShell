@@ -71,7 +71,11 @@ describe("백준 api - 파싱 테스트", () => {
 })
 
 describe.only("백준 api - 로그인 및 제출 테스트", () => {
+    if(process.env.BJ_token === undefined) throw new Error("BJ_token not found. Hint: create .env file and add BJ_token")
+    
     const user = new User(process.env.BJ_token || "")
+    if(process.env.BJ_autologin) user.setAutologin(process.env.BJ_autologin)
+
     it("로그인 200 확인", async () => {
         expect(await user.checkLogin()).toBe(200)
     })

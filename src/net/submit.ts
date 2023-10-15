@@ -19,6 +19,7 @@ export async function getUsername(): Promise<string> {
 export class User {
     static ERR_INVALID = new Error("Invalid user token")
     #token: string = ""
+    #autologin: string = ""
     username: string = ""
 
     constructor(token: string) {
@@ -29,8 +30,12 @@ export class User {
         this.#token = token
     }
 
+    setAutologin(autologin: string) {
+        this.#autologin = autologin
+    }
+
     async login(): Promise<[number, Response | null]> {
-        const resp = await getResponse('modify', this.#token)
+        const resp = await getResponse('modify', `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
         if(resp.url.includes('login')) return [302, null]
         return [resp.status, resp]
     }
@@ -49,6 +54,6 @@ export class User {
         return uname
     }
 
-
+    
 
 }
