@@ -1,6 +1,6 @@
 import { getResponse } from "@/net/fetch"
 import { getProblem } from "@/net/parse"
-import { User } from "@/net/submit"
+import { User } from "@/net/user"
 import config from "@/config"
 import dotenv from "dotenv"
 dotenv.config()
@@ -72,7 +72,7 @@ describe("백준 api - 파싱 테스트", () => {
 
 describe.only("백준 api - 로그인 및 제출 테스트", () => {
     if(process.env.BJ_token === undefined) throw new Error("BJ_token not found. Hint: create .env file and add BJ_token")
-    
+
     const user = new User(process.env.BJ_token || "")
     if(process.env.BJ_autologin) user.setAutologin(process.env.BJ_autologin)
 

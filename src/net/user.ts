@@ -1,6 +1,7 @@
 import { Response } from 'node-fetch'
-import { get, getResponse } from './fetch'
+import { get, getResponse, postResponse } from './fetch'
 import * as cheerio from 'cheerio';
+import config from '@/config'
 
 // Use as: checkLogin() === 200
 /* export async function checkLogin(token: string): Promise<[number, Response | null]> {
@@ -21,6 +22,7 @@ export class User {
     #token: string = ""
     #autologin: string = ""
     username: string = ""
+    qnum: number = 0
 
     constructor(token: string) {
         this.#token = token
@@ -35,13 +37,18 @@ export class User {
     }
 
     async login(): Promise<[number, Response | null]> {
-        const resp = await getResponse('modify', `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
+        const resp = await getResponse(config.MODIFY, `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
         if(resp.url.includes('login')) return [302, null]
         return [resp.status, resp]
     }
 
     async checkLogin(): Promise<number> {
         return (await this.login())[0]
+    }
+
+    async post(path: string, data: string): Promise<Response> {
+        const resp = await postResponse(path, data, `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
+        return resp
     }
 
     async getUsername(): Promise<string> {
@@ -54,6 +61,5 @@ export class User {
         return uname
     }
 
-    
 
 }
