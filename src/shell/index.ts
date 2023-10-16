@@ -5,6 +5,7 @@ import os from 'os'
 import { User } from '@/net/user'
 import child_process from 'child_process'
 import { loadFromLocal, saveToLocal } from '@/shell/localstorage'
+import kill from 'tree-kill'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -16,8 +17,10 @@ export class BJShell {
     })
     #loginLock: LoginLock = 2
     #user = new User("")
+    #cp : child_process.ChildProcessWithoutNullStreams | null = null
+    #prevCommand = ""
 
-    async setPrompt() {
+    async setPrompt(cmd?: string) {
         if (this.#loginLock === 0) this.r.setPrompt('Enter login token: ')
         else if (this.#loginLock === 1) this.r.setPrompt('(Optional) Enter autologin token: ')
         else {
@@ -27,7 +30,7 @@ export class BJShell {
                 + (this.#user.qnum ? ` | 🚩 ${chalk.yellow(this.#user.qnum)}` : "")
             this.r.setPrompt(`(${prefix}) ${dir} BJ> `)
         }
-        this.r.prompt()
+        if (cmd !== 'exec') this.r.prompt()
     }
 
     async #loginGuard() {
@@ -60,9 +63,15 @@ export class BJShell {
 
     #initOn() {
         this.r.on('line', async line => {
-            if (await this.#loginGuardOnLine(line)) return
+            if (this.#cp) { // prior handling 1: child process stdin
+                this.#cp.stdin.write(line + '\n');
+                return
+            }
+            if (await this.#loginGuardOnLine(line)) return // prior handling 2: login guard
+            line = line.trim()
+            if (line === '.') line = this.#prevCommand
             const argv = line.split(' ')
-            const cmd = argv[0]
+            let cmd = argv[0]
             const arg = argv.slice(1)
             // TODO: sepearte command and explain
             switch (cmd) {
@@ -120,24 +129,64 @@ export class BJShell {
                     await saveToLocal('qnum', "0")
                     break
                 case 'exec':
-                    
-                    break
+                    if (arg.length === 0) {
+                        console.log("exec <command>")
+                        break
+                    }
+                    // https://velog.io/@dev2820/nodejs%EC%9D%98-%EC%9E%90%EC%8B%9D%ED%94%84%EB%A1%9C%EC%84%B8%EC%8A%A4
+                    // https://kisaragi-hiu.com/nodejs-cmd/
+                    // FIXME: stdio full sync
 
+                    // should support below
+                    // exec read hello; echo hello;
+                    // exec sleep 2; echo 1; sleep 2; echo 2;
+                    // exec zsh: not perfect
+                    // 
+                    const command = arg.join(' ')
+                    this.#cp = child_process.spawn('bash', ['-c', command])
+                    await new Promise((resolveFunc) => {
+                        this.#cp!.stdout?.on("data", (x: string) => {
+                            process.stdout.write(x.toString());
+                        });
+                        this.#cp!.stderr?.on("data", (x: string) => {
+                            process.stderr.write(x.toString());
+                        });
+                        this.#cp!.on("exit", (code: number) => {
+                            resolveFunc(code);
+                        });
+                    });
+                    this.#cp = null
+                    break
+                case 't':
+                    console.log('t')
+                    return
                 default:
                     console.log("Unknown Command")
                     break
 
             }
             await this.setPrompt()
+            this.#prevCommand = line
         })
 
         this.r.on('close', function () {
             process.exit()
         })
 
-        // r.on('SIGINT', function(){
-        //     r.prompt()
-        // })
+        // Handle Ctrl+C (SIGINT) to send it to the child process
+        this.r.on('SIGINT', async () => {
+            if (this.#cp === null) {
+                console.log()
+                // FIXME: clear input buffer
+                await this.setPrompt()
+            }
+            else kill(this.#cp.pid ?? 0, 'SIGINT', (err: any) => {
+                if (err) {
+                    if (err instanceof Error) console.log(err.message)
+                    else console.log(err)
+                }
+            })
+        });
 
     }
 
@@ -156,7 +205,7 @@ export class BJShell {
             this.#user.setToken(token)
             if (autologin) this.#user.setAutologin(autologin)
         }
-        if(qnum) this.#user.qnum = parseInt(qnum)
+        if (qnum) this.#user.qnum = parseInt(qnum)
 
         await this.#loginGuard()
         await this.setPrompt()
