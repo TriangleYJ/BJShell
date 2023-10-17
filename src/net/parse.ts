@@ -22,8 +22,10 @@ interface problem {
     problem_limit?: string,
 }
 
+const problemCache: { [key: number]: problem } = {}
 
 export async function getProblem(qnum: number): Promise<problem> {
+    if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
     const html = await get(`${config.PROB}${qnum}`)
     const $ = cheerio.load(html)
@@ -44,7 +46,7 @@ export async function getProblem(qnum: number): Promise<problem> {
         const explain = wsr($(`#sample_explain_${i}`).text())
         testcases.push(explain ? { input: input, output: output, explain: explain } : { input: input, output: output })
     }
-    return {
+    const problem = {
         qnum: qnum,
         title: $('#problem_title').text(),
         parsed_date: new Date(),
@@ -56,4 +58,6 @@ export async function getProblem(qnum: number): Promise<problem> {
         hint: wsr($('#problem_hint').text()).trim() || undefined,
         problem_limit: wsr($('#problem_limit').text()).trim() || undefined,
     }
+    problemCache[qnum] = problem
+    return problem
 }
