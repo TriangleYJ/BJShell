@@ -4,9 +4,10 @@ import chalk from 'chalk'
 import os from 'os'
 import { User } from '@/net/user'
 import { spawn, execSync, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
-import { loadFromLocal, saveToLocal } from '@/shell/localstorage'
+import { loadFromLocal, saveToLocal } from '@/storage/localstorage'
 import kill from 'tree-kill'
 import { getProblem } from '@/net/parse'
+import { writeMDFile } from '@/storage/mdviewer'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -133,13 +134,21 @@ export class BJShell {
                     if (question === null) {
                         console.log("Invaild question number")
                         break
-                    } else {
-                        this.#user.qnum = parseInt(arg[0])
-                        await saveToLocal('qnum', arg[0])
-                        console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
-                        // TODO: ASK CREATE FILE
+                    }
+                    this.#user.qnum = parseInt(arg[0])
+                    await saveToLocal('qnum', arg[0])
+                    console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
+                    // TODO: ASK CREATE FILE
+                    break
+                }
+                case 'show': {
+                    const question = await getProblem(this.#user.qnum)
+                    if (question === null) {
+                        console.log("Invaild question number")
                         break
                     }
+                    await writeMDFile(question)
+                    break
                 }
                 case 'unset': {
                     this.#user.qnum = 0
@@ -177,7 +186,7 @@ export class BJShell {
                     this.#cp = null
                     break
                 }
-                case 't': 
+                case 't':
                 case 'test': {
                     // TODO: problem caching
                     const question = await getProblem(this.#user.qnum)

@@ -2,7 +2,7 @@ import config from '@/config'
 import { get } from './fetch'
 import * as cheerio from 'cheerio';
 
-interface problem {
+export interface problem {
     qnum: number,
     title: string,
     parsed_date: Date,
@@ -20,6 +20,7 @@ interface problem {
     testcases: { input: string, output: string, explain?: string }[]
     hint?: string,
     problem_limit?: string,
+    html: string
 }
 
 const problemCache: { [key: number]: problem } = {}
@@ -28,7 +29,7 @@ export async function getProblem(qnum: number): Promise<problem | null> {
     if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
     const [sts, html] = await get(`${config.PROB}${qnum}`)
-    if(sts !== 200) return null
+    if (sts !== 200) return null
     const $ = cheerio.load(html)
     const table = $('#problem-info')
     const out_stat = {
@@ -47,9 +48,34 @@ export async function getProblem(qnum: number): Promise<problem | null> {
         const explain = wsr($(`#sample_explain_${i}`).text())
         testcases.push(explain ? { input: input, output: output, explain: explain } : { input: input, output: output })
     }
+    const title = $('#problem_title').text()
+    const rawHtml = $('body > div.wrapper > div.container.content > div.row')
+
+    // move problem tag
+    const tag = $(".problem-label");
+    tag.each(function () { 
+        var content = $(this).html();
+        content = "<code>" + content + "</code>";
+        $(this).html(content);
+    });
+    $(".table-responsive").parent().prepend(tag)
+
+    // make link to h1
+    rawHtml.find('h1').html(`<a href="${config.URL}${config.PROB}${qnum}">${$('#problem_title').text()}</a>`)
+
+    rawHtml.find('.problem-menu').remove(); // remove upper nav problem menu
+    rawHtml.find('.copy-button').remove(); // remove upper nav problem menu
+
+    const preElements = $("pre");
+    preElements.each(function () { // make <pre> tag to <code> tag
+        var content = $(this).html();
+        content = "<code>" + content + "</code>";
+        $(this).html(content);
+    });
+
     const problem = {
         qnum: qnum,
-        title: $('#problem_title').text(),
+        title,
         parsed_date: new Date(),
         stat: out_stat,
         prob: wsr($('#problem_description').text()).trim(),
@@ -58,6 +84,7 @@ export async function getProblem(qnum: number): Promise<problem | null> {
         testcases: testcases,
         hint: wsr($('#problem_hint').text()).trim() || undefined,
         problem_limit: wsr($('#problem_limit').text()).trim() || undefined,
+        html: rawHtml.html() || ""
     }
     problemCache[qnum] = problem
     return problem

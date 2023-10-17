@@ -4,7 +4,7 @@ import conf from '@/config'
 
 export async function saveToLocal(name: string, value: string) {
     // save variable to ~/.bjshell
-    const configPath = `${os.homedir()}/${conf.CONFIG}`
+    const configPath = `${os.homedir()}/.bjshell/config.json`
     let config: any = {}
     try {
         config = JSON.parse(await fs.readFile(configPath, 'utf-8'))
