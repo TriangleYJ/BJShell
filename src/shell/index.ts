@@ -18,7 +18,7 @@ export class BJShell {
     })
     #loginLock: LoginLock = 2
     #user = new User("")
-    #cp : ChildProcessWithoutNullStreams | null = null
+    #cp: ChildProcessWithoutNullStreams | null = null
     #prevCommand = ""
 
     async setPrompt(cmd?: string) {
@@ -76,18 +76,22 @@ export class BJShell {
             const arg = argv.slice(1)
             // TODO: sepearte command and explain
             switch (cmd) {
-                case '':
+                case '': {
                     break
-                case 'exit':
+                }
+                case 'exit': {
                     this.r.close()
                     break
-                case 'help':
+                }
+                case 'help': {
                     console.log("BJ Shell Help")
                     break
-                case 'pwd':
+                }
+                case 'pwd': {
                     console.log(process.cwd())
                     break
-                case 'ls':
+                }
+                case 'ls': {
                     try {
                         const files = await fs.readdir(process.cwd())
                         let output = ""
@@ -101,7 +105,8 @@ export class BJShell {
                         else console.log(e)
                     }
                     break
-                case 'cd':
+                }
+                case 'cd': {
                     try {
                         process.chdir(arg[0])
                     } catch (e) {
@@ -109,7 +114,8 @@ export class BJShell {
                         else console.log(e)
                     }
                     break
-                case 'logout':
+                }
+                case 'logout': {
                     this.#user.setToken("")
                     this.#user.setAutologin("")
                     await saveToLocal('token', "")
@@ -117,19 +123,30 @@ export class BJShell {
                     this.#loginLock = 0
                     console.log("Logged out")
                     break
-                case 'set':
+                }
+                case 'set': {
                     if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
                         console.log("set <question number>")
                         break
                     }
-                    this.#user.qnum = parseInt(arg[0])
-                    await saveToLocal('qnum', arg[0])
-                    break
-                case 'unset':
+                    const question = await getProblem(parseInt(arg[0]))
+                    if (question === null) {
+                        console.log("Invaild question number")
+                        break
+                    } else {
+                        this.#user.qnum = parseInt(arg[0])
+                        await saveToLocal('qnum', arg[0])
+                        console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
+                        // TODO: ASK CREATE FILE
+                        break
+                    }
+                }
+                case 'unset': {
                     this.#user.qnum = 0
                     await saveToLocal('qnum', "0")
                     break
-                case 'exec':
+                }
+                case 'exec': {
                     if (arg.length === 0) {
                         console.log("exec <command>")
                         break
@@ -145,7 +162,7 @@ export class BJShell {
                     // 
                     const command = arg.join(' ')
                     this.r.setPrompt('')
-                    this.#cp = spawn('bash', ['-c', command])
+                    this.#cp = spawn(command, [], { shell: true })
                     await new Promise((resolveFunc) => {
                         this.#cp!.stdout?.on("data", (x: string) => {
                             process.stdout.write(x.toString());
@@ -159,35 +176,38 @@ export class BJShell {
                     });
                     this.#cp = null
                     break
-                case 't':
-                case 'test':
-                    if(this.#user.qnum === 0) {
-                        console.log("Set question number first")
-                        break
-                    }
+                }
+                case 't': 
+                case 'test': {
                     // TODO: problem caching
                     const question = await getProblem(this.#user.qnum)
+                    if (question === null) {
+                        console.log("Invaild question number")
+                        break
+                    }
                     console.log(`===== Testcase: ${question.qnum}. ${question.title} =====`)
                     let success: number = 0
                     // TODO: compile language support
                     // TODO: language test command
                     // TODO: custom testcases
-                    for(const i in question.testcases) {
+                    for (const i in question.testcases) {
                         const t = question.testcases[i]
                         const expected = t.output.replace(/\r\n/g, '\n')
                         // default timelimit: stat.timelimit * 2
                         const timelimit: number = parseInt((question.stat.timelimit.match(/\d+/) ?? ["2"])[0]) * 2
-                        const result = spawnSync("python3", [`${question.qnum}.py`], {input: t.input,
-                                timeout: timelimit * 1000})
+                        const result = spawnSync("python3", [`${question.qnum}.py`], {
+                            input: t.input,
+                            timeout: timelimit * 1000
+                        })
                         if (result.signal === "SIGTERM") console.log(chalk.red(`Test #${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
-                        else if(result.status !== 0) {
+                        else if (result.status !== 0) {
                             console.log(chalk.red(`Test #${i} : Error! ⚠`))
                             console.log(result.stderr.toString())
                         } else {
                             const actual = String(result.stdout).replace(/\r\n/g, '\n')
-                            if(actual == expected) console.log(chalk.green(`Test #${i} : Passed! ✅`))
+                            if (actual == expected) console.log(chalk.green(`Test #${i} : Passed! ✅`))
                             else console.log(chalk.red(`Test #${i} : Failed! ❌`))
-                            if(actual != expected) {
+                            if (actual != expected) {
                                 console.log(`Expected: ${expected.trim()}`);
                                 console.log(`Actual: ${actual.trim()}`);
                             } else success += 1
@@ -196,9 +216,11 @@ export class BJShell {
                     if (success === question.testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
                     else console.log(chalk.yellow(`${success} / ${question.testcases.length} testcase passed`));
                     break
-                default:
+                }
+                default: {
                     console.log("Unknown Command")
                     break
+                }
 
             }
             await this.setPrompt()

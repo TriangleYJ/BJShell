@@ -68,9 +68,13 @@ describe("백준 api - 파싱 테스트", () => {
                 }],
         })
     })
+    it("존재하지 않는 문제 파싱", async () => {
+        const result = await getProblem(999999)
+        expect(result).toBeNull()
+    })
 })
 
-describe.only("백준 api - 로그인 및 제출 테스트", () => {
+describe("백준 api - 로그인 및 제출 테스트", () => {
     if(process.env.BJ_token === undefined) throw new Error("BJ_token not found. Hint: create .env file and add BJ_token")
 
     const user = new User(process.env.BJ_token || "")

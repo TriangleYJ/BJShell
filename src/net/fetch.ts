@@ -25,6 +25,7 @@ export async function postResponse(path: string, body: string, cookie: string) {
 }
 
 
-export async function get(url: string) {
-    return (await getResponse(url)).text()
+export async function get(url: string): Promise<[number, string]> {
+    const r = await getResponse(url)
+    return [r.status, await r.text()]
 }

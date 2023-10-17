@@ -24,10 +24,11 @@ interface problem {
 
 const problemCache: { [key: number]: problem } = {}
 
-export async function getProblem(qnum: number): Promise<problem> {
+export async function getProblem(qnum: number): Promise<problem | null> {
     if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
-    const html = await get(`${config.PROB}${qnum}`)
+    const [sts, html] = await get(`${config.PROB}${qnum}`)
+    if(sts !== 200) return null
     const $ = cheerio.load(html)
     const table = $('#problem-info')
     const out_stat = {

@@ -1,5 +1,5 @@
 import { Response } from 'node-fetch'
-import { get, getResponse, postResponse } from './fetch'
+import { getResponse, postResponse } from './fetch'
 import * as cheerio from 'cheerio';
 import config from '@/config'
 
