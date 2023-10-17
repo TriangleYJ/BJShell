@@ -3,9 +3,10 @@ import fs from 'fs/promises'
 import chalk from 'chalk'
 import os from 'os'
 import { User } from '@/net/user'
-import child_process from 'child_process'
+import { spawn, execSync, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
 import { loadFromLocal, saveToLocal } from '@/shell/localstorage'
 import kill from 'tree-kill'
+import { getProblem } from '@/net/parse'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -17,7 +18,7 @@ export class BJShell {
     })
     #loginLock: LoginLock = 2
     #user = new User("")
-    #cp : child_process.ChildProcessWithoutNullStreams | null = null
+    #cp : ChildProcessWithoutNullStreams | null = null
     #prevCommand = ""
 
     async setPrompt(cmd?: string) {
@@ -143,7 +144,8 @@ export class BJShell {
                     // exec zsh: not perfect
                     // 
                     const command = arg.join(' ')
-                    this.#cp = child_process.spawn('bash', ['-c', command])
+                    this.r.setPrompt('')
+                    this.#cp = spawn('bash', ['-c', command])
                     await new Promise((resolveFunc) => {
                         this.#cp!.stdout?.on("data", (x: string) => {
                             process.stdout.write(x.toString());
@@ -158,8 +160,42 @@ export class BJShell {
                     this.#cp = null
                     break
                 case 't':
-                    console.log('t')
-                    return
+                case 'test':
+                    if(this.#user.qnum === 0) {
+                        console.log("Set question number first")
+                        break
+                    }
+                    // TODO: problem caching
+                    const question = await getProblem(this.#user.qnum)
+                    console.log(`===== Testcase: ${question.qnum}. ${question.title} =====`)
+                    let success: number = 0
+                    // TODO: compile language support
+                    // TODO: language test command
+                    // TODO: custom testcases
+                    for(const i in question.testcases) {
+                        const t = question.testcases[i]
+                        const expected = t.output.replace(/\r\n/g, '\n')
+                        // default timelimit: stat.timelimit * 2
+                        const timelimit: number = parseInt((question.stat.timelimit.match(/\d+/) ?? ["2"])[0]) * 2
+                        const result = spawnSync("python3", [`${question.qnum}.py`], {input: t.input,
+                                timeout: timelimit * 1000})
+                        if (result.signal === "SIGTERM") console.log(chalk.red(`Test #${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
+                        else if(result.status !== 0) {
+                            console.log(chalk.red(`Test #${i} : Error! ⚠`))
+                            console.log(result.stderr.toString())
+                        } else {
+                            const actual = String(result.stdout).replace(/\r\n/g, '\n')
+                            if(actual == expected) console.log(chalk.green(`Test #${i} : Passed! ✅`))
+                            else console.log(chalk.red(`Test #${i} : Failed! ❌`))
+                            if(actual != expected) {
+                                console.log(`Expected: ${expected.trim()}`);
+                                console.log(`Actual: ${actual.trim()}`);
+                            } else success += 1
+                        }
+                    }
+                    if (success === question.testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
+                    else console.log(chalk.yellow(`${success} / ${question.testcases.length} testcase passed`));
+                    break
                 default:
                     console.log("Unknown Command")
                     break
