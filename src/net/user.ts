@@ -36,8 +36,12 @@ export class User {
         this.#autologin = autologin
     }
 
+    getCookies(): string {
+        return `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`
+    }
+
     async login(): Promise<[number, Response | null]> {
-        const resp = await getResponse(config.MODIFY, `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
+        const resp = await getResponse(config.MODIFY, this.getCookies())
         if(resp.url.includes('login')) return [302, null]
         return [resp.status, resp]
     }
@@ -47,7 +51,7 @@ export class User {
     }
 
     async post(path: string, data: string): Promise<Response> {
-        const resp = await postResponse(path, data, `OnlineJudge=${this.#token}; bojautologin=${this.#autologin};`)
+        const resp = await postResponse(path, data, this.getCookies())
         return resp
     }
 

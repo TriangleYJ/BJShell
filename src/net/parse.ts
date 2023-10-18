@@ -25,10 +25,10 @@ export interface problem {
 
 const problemCache: { [key: number]: problem } = {}
 
-export async function getProblem(qnum: number): Promise<problem | null> {
+export async function getProblem(qnum: number, cookie?: string): Promise<problem | null> {
     if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
-    const [sts, html] = await get(`${config.PROB}${qnum}`)
+    const [sts, html] = await get(`${config.PROB}${qnum}`, cookie ?? undefined)
     if (sts !== 200) return null
     const $ = cheerio.load(html)
     const table = $('#problem-info')

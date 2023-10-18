@@ -132,7 +132,7 @@ export class BJShell {
                         console.log("set <question number>")
                         break
                     }
-                    const question = await getProblem(parseInt(arg[0]))
+                    const question = await getProblem(parseInt(arg[0]), this.#user.getCookies())
                     if (question === null) {
                         console.log("Invaild question number")
                         break
