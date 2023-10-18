@@ -27,3 +27,7 @@ describe("BJ Shell 테스트", () => {
         it("##, #### 주석 제거", () => {"All testcase passed! 🎉"})
     })
 })
+
+describe.skip("MD Viewer 테스트", () => {
+    // TODO: set to real test
+})

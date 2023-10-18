@@ -3,7 +3,8 @@ import fs from 'fs/promises'
 import chalk from 'chalk'
 import os from 'os'
 import { User } from '@/net/user'
-import { spawn, execSync, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
+import conf from '@/config'
+import { spawn, exec, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
 import { loadFromLocal, saveToLocal } from '@/storage/localstorage'
 import kill from 'tree-kill'
 import { getProblem } from '@/net/parse'
@@ -21,6 +22,7 @@ export class BJShell {
     #user = new User("")
     #cp: ChildProcessWithoutNullStreams | null = null
     #prevCommand = ""
+    firstShow = true
 
     async setPrompt(cmd?: string) {
         if (this.#loginLock === 0) this.r.setPrompt('Enter login token: ')
@@ -39,7 +41,7 @@ export class BJShell {
         // Check curruent token exists or vaild
         if (await this.#user.checkLogin() === 200) return true
         console.log(`${chalk.red("Log in required")}`)
-        console.log(`If you don't know how to find your token, refer here: https://google.com`)
+        console.log(`If you don't know how to find your token, refer here: https://google.com`) // TODO: fix link
         this.#loginLock = 0
         return false
     }
@@ -138,16 +140,29 @@ export class BJShell {
                     this.#user.qnum = parseInt(arg[0])
                     await saveToLocal('qnum', arg[0])
                     console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
+                    
+                    await writeMDFile(question)
                     // TODO: ASK CREATE FILE
                     break
                 }
                 case 'show': {
-                    const question = await getProblem(this.#user.qnum)
-                    if (question === null) {
-                        console.log("Invaild question number")
-                        break
+                        // run vscode
+                    exec(`code ${conf.MDPATH}`)
+                    if(this.firstShow) {
+                        this.firstShow = false
+                        console.log("MD file opened in VSCode")
+                        console.log("※  If your file is not changed, press ... and click 'Refresh Preview'")
+                        console.log("※  If you see the raw code, not preview, follow below in VSCode.")
+                        console.log(`
+1. Press "Ctrl+Shift+P"
+2. Click "Preferences: Open User Settings (JSON)"
+3. Add these lines to json file before the last }
+    , // don't forget the comma
+    "workbench.editorAssociations": {   
+        "*.md": "vscode.markdown.preview.editor",
+    }
+`)
                     }
-                    await writeMDFile(question)
                     break
                 }
                 case 'unset': {

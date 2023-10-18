@@ -49,29 +49,7 @@ export async function getProblem(qnum: number): Promise<problem | null> {
         testcases.push(explain ? { input: input, output: output, explain: explain } : { input: input, output: output })
     }
     const title = $('#problem_title').text()
-    const rawHtml = $('body > div.wrapper > div.container.content > div.row')
-
-    // move problem tag
-    const tag = $(".problem-label");
-    tag.each(function () { 
-        var content = $(this).html();
-        content = "<code>" + content + "</code>";
-        $(this).html(content);
-    });
-    $(".table-responsive").parent().prepend(tag)
-
-    // make link to h1
-    rawHtml.find('h1').html(`<a href="${config.URL}${config.PROB}${qnum}">${$('#problem_title').text()}</a>`)
-
-    rawHtml.find('.problem-menu').remove(); // remove upper nav problem menu
-    rawHtml.find('.copy-button').remove(); // remove upper nav problem menu
-
-    const preElements = $("pre");
-    preElements.each(function () { // make <pre> tag to <code> tag
-        var content = $(this).html();
-        content = "<code>" + content + "</code>";
-        $(this).html(content);
-    });
+    const rawHtml = $('body')
 
     const problem = {
         qnum: qnum,
