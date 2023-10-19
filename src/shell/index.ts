@@ -203,7 +203,6 @@ export class BJShell {
                 }
                 case 't':
                 case 'test': {
-                    // TODO: problem caching
                     const question = await getProblem(this.#user.qnum)
                     if (question === null) {
                         console.log("Invaild question number")
@@ -240,6 +239,9 @@ export class BJShell {
                     if (success === question.testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
                     else console.log(chalk.yellow(`${success} / ${question.testcases.length} testcase passed`));
                     break
+                }
+                case 'lang': {
+                    // TODO: set languate https://help.acmicpc.net/language/info/all
                 }
                 default: {
                     console.log("Unknown Command")

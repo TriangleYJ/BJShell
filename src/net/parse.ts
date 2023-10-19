@@ -23,6 +23,17 @@ export interface problem {
     html: string
 }
 
+export interface language {
+    name: string,
+    num: number,
+    compile: string,
+    run: string,
+    version: string,
+    timelimit: string,
+    memlimit: string,
+    code1000: string,
+}
+
 const problemCache: { [key: number]: problem } = {}
 
 export async function getProblem(qnum: number, cookie?: string): Promise<problem | null> {
@@ -67,3 +78,54 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
     problemCache[qnum] = problem
     return problem
 }
+
+export async function getLanguage(): Promise<language[]> {
+    const [sts, html] = await get("", "", config.LANGURL)
+    if (sts !== 200) {
+        console.log(sts)
+        console.log("Failed to get language list")
+        return []
+    }
+    const $ = cheerio.load(html)
+    const arr = []
+    for (let c of $(`.card`)) {
+        const name = $(c).find('header').text()
+        let num = 0;
+        let compile = '';
+        let run = '';
+        let version = '';
+        let timelimit = '';
+        let memlimit = '';
+        let code1000 = '';
+        const li = $(c).find('li')
+        for (let l of li) {
+            let lt = $(l).text();
+            let tags = ['언어 번호: ', '컴파일: ', '실행: ', '버전: ', '시간 제한: ', '메모리 제한: ']
+            for (let i in tags) {
+                if (lt.startsWith(tags[i])) {
+                    lt = lt.replace(tags[i], '')
+                    switch (i) {
+                        case '0': num = parseInt(lt); break
+                        case '1': compile = lt; break
+                        case '2': run = lt; break
+                        case '3': version = lt; break
+                        case '4': timelimit = lt; break
+                        case '5': memlimit = lt; break
+                        default:
+                            break
+                    }
+                }
+            }
+        }
+        // FIXME: code1000 not working -> for testing
+        // $(c).find('.CodeMirror-gutter-wrapper').remove();
+        // code1000 = $(c).find('.CodeMirror-code').text();
+        arr.push({
+            name, num, compile, run, version, timelimit, memlimit, code1000
+        })
+    }
+    return arr
+}
+
+// (async () => {
+//     console.log(await getLanguage())})()

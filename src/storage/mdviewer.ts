@@ -24,7 +24,6 @@ export async function writeMDFile(problem: problem) {
 
     // make link to h1
     content.find('h1').html(`<a href="${conf.URL}${conf.PROB}${problem.qnum}">${$('#problem_title').text()}</a>`)
-
     // move tier icon to table
     $('#problem-info thead tr').prepend('<th>티어</th>');
     $('#problem-info tbody tr').prepend('<td></td>');
@@ -34,8 +33,6 @@ export async function writeMDFile(problem: problem) {
 
 
     content.find('.page-header > blockquote').remove() // remove unnecessary blockquote
-    content.find(".problem-button").remove() // remove unnecessary problem-button
-    content.find(".dropdown-menu").remove() // remove unnecessary dropdown (원문)
     content.find('.problem-menu').remove(); // remove upper nav problem menu
     content.find('.copy-button').remove(); // remove copy button from h2 title
     content.find('[style*="display: none;"]').remove(); // remove hidden base64 elements

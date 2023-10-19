@@ -1,8 +1,8 @@
 import config from '@/config'
 import fetch from 'node-fetch'
 
-export async function getResponse(path: string, cookie?: string) {
-    return fetch(config.URL + path, {
+export async function getResponse(path: string, cookie?: string, url?: string) {
+    return fetch(url ?? config.URL + path, {
         "headers": {
             "user-agent": config.USER_AGENT,
             "Referer": config.URL,
@@ -25,7 +25,7 @@ export async function postResponse(path: string, body: string, cookie: string) {
 }
 
 
-export async function get(path: string, cookie?: string): Promise<[number, string]> {
-    const r = await getResponse(path, cookie)
+export async function get(path: string, cookie?: string, url?: string): Promise<[number, string]> {
+    const r = await getResponse(path, cookie, url)
     return [r.status, await r.text()]
 }

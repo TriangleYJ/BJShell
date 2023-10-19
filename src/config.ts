@@ -5,6 +5,7 @@ export default {
     PROB: 'problem/',
     PLIST: 'problemset/',
     MODIFY: 'modify',
+    LANGURL: 'https://help.acmicpc.net/language/info',
     MDPATH: `${os.homedir()}/.bjshell/problem.md`,
     CONFPATH: `${os.homedir()}/.bjshell/config.json`,
     ROOTPATH: `${os.homedir()}/.bjshell`,
