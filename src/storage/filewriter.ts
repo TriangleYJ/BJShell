@@ -1,5 +1,6 @@
 import os from 'os'
 import fs from 'fs/promises'
+import { existsSync } from 'fs'
 import conf from '@/config'
 import { problem } from '@/net/parse'
 import { NodeHtmlMarkdown, NodeHtmlMarkdownOptions } from 'node-html-markdown'
@@ -53,4 +54,23 @@ export async function writeMDFile(problem: problem) {
     // ASSERT '~/.bjshell' exists - via login
     const md = NodeHtmlMarkdown.translate(content.html() ?? "")
     await fs.writeFile(conf.MDPATH, md)
+}
+
+export async function writeFile(path: string, content: string, force?: boolean) {
+    if(!force && existsSync(path)) return false
+    await fs.writeFile(path, content)
+    return true
+}
+
+export async function writeMainTmp(src: string, ext: string) {
+    // copy file in src and overwrite to ~/.bjshell/Main.${extension}
+    const path = `${conf.ROOTPATH}/Main${ext}`
+    try{
+        await fs.copyFile(src, path)
+    } catch(e) {
+        if(e instanceof Error) console.log(e.message)
+        else console.log(e)
+        return false
+    }
+    return true
 }

@@ -142,7 +142,7 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     }
     console.log()
     console.log(`Loaded ${arr.length} languages from BOJ`)
-    console.log(`❗ Some languages' extension may be wrong or empty. Please check via "lang list" command and change the setting in ${config.LANGPATH} ❗`)
+    console.log(`❗ Some languages' extension may be wrong or empty. Please check via "lang list" command.`)
 
     await saveToLocalWithPath(config.LANGPATH, 'langs', arr)
     langsCache.push(...arr)

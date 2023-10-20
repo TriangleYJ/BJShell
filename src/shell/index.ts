@@ -7,7 +7,7 @@ import conf from '@/config'
 import { spawn, exec, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
 import kill from 'tree-kill'
 import { getLanguages, getProblem, language } from '@/net/parse'
-import { writeMDFile } from '@/storage/mdviewer'
+import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
@@ -31,10 +31,10 @@ export class BJShell {
         else {
             const rawdir = chalk.green(process.cwd());
             const dir = rawdir.replace(os.homedir(), "~")
-            const curlangname = this.#langs.find(x => x.num === this.#user.getLang())?.name ?? ""
+            const curLangName = this.findLang()?.name ?? ""
             const prefix = `👤 ${chalk.blueBright(await this.#user.getUsername())}`
-                + (this.#user.getQnum() ? ` | 🚩 ${chalk.yellow(this.#user.getQnum())}` : "" )
-                + (this.#user.getLang() !== -1 ? ` | 🌐 ${chalk.yellow(curlangname)}` : "" )
+                + (this.#user.getQnum() ? ` | 🚩 ${chalk.yellow(this.#user.getQnum())}` : "")
+                + (this.#user.getLang() !== -1 ? ` | 🌐 ${chalk.yellow(curLangName)}` : "")
             this.r.setPrompt(`(${prefix}) ${dir} BJ> `)
         }
         if (cmd !== 'exec') this.r.prompt()
@@ -63,6 +63,10 @@ export class BJShell {
             await this.setPrompt()
         }
         return true
+    }
+
+    findLang(num?: number): language | undefined {
+        return this.#langs.find(x => x.num === (num ?? this.#user.getLang()))
     }
 
     #initOn() {
@@ -126,8 +130,14 @@ export class BJShell {
                     break
                 }
                 case 'set': {
+                    if (arg.length === 0 && this.#user.getQnum() !== 0)
+                        arg.push(String(this.#user.getQnum()))
                     if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
                         console.log("set <question number>")
+                        break
+                    }
+                    if (this.#user.getLang() === -1) {
+                        console.log("Set language first")
                         break
                     }
                     const question = await getProblem(parseInt(arg[0]), this.#user.getCookies())
@@ -137,15 +147,20 @@ export class BJShell {
                     }
                     await this.#user.setQnum(parseInt(arg[0]))
                     console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
-                    
+
                     await writeMDFile(question)
-                    // TODO: ASK CREATE FILE
+                    const extension = this.findLang()?.extension ?? ""
+                    const filepath = `${process.cwd()}/${question.qnum}${extension}`
+
+                    if (await writeFile(filepath, "")) console.log(`Create new file to ${chalk.green(filepath)}`)
+                    else console.log("File exists! skip creating new file...")
+                    exec(`code ${filepath}`)
                     break
                 }
                 case 'show': {
-                        // run vscode
+                    // run vscode
                     exec(`code ${conf.MDPATH}`)
-                    if(this.#firstShow) {
+                    if (this.#firstShow) {
                         this.#firstShow = false
                         console.log("MD file opened in VSCode")
                         console.log("※  If your file is not changed, press ... and click 'Refresh Preview'")
@@ -209,19 +224,47 @@ export class BJShell {
                     // TODO: compile language support
                     // TODO: language test command
                     // TODO: custom testcases
+                    const lang = this.findLang()
+                    if (lang === undefined) {
+                        console.log("Set language first")
+                        break
+                    }
+                    const extension = lang.extension ?? ""
+                    const filepath = `${process.cwd()}/${question.qnum}${extension}`
+                    if (!await writeMainTmp(filepath, extension)) break;
+
+                    // ask compile
+                    // const doCompile = await new Promise((resolveFunc) => {
+                    //     this.r.question("Compile? (y/n) ", (answer) => {
+                    //         resolveFunc(answer === 'y')
+                    //     })
+                    // })
+                    if (lang.compile && !lang.run.includes('Main' + extension)) {
+                        const result = spawnSync(lang.compile.split(" ")[0], [...lang.compile.split(" ").slice(1)], {
+                            cwd: conf.ROOTPATH
+                        })
+                        if (result.status !== 0) {
+                            console.log(`${lang.compile}: ${chalk.red("Compile Error!")}`)
+                            console.log(result.stderr?.toString())
+                            break
+                        }
+                    }
+
                     for (const i in question.testcases) {
                         const t = question.testcases[i]
                         const expected = t.output.replace(/\r\n/g, '\n')
                         // default timelimit: stat.timelimit * 2
                         const timelimit: number = parseInt((question.stat.timelimit.match(/\d+/) ?? ["2"])[0]) * 2
-                        const result = spawnSync("python3", [`${question.qnum}.py`], {
+                        // FIXME: javascript error - using /dev/stdin returns ENXIO: no such device or address, open '/dev/stdin'
+                        const result = spawnSync(lang.run.split(" ")[0], [...lang.run.split(" ").slice(1)], {
                             input: t.input,
+                            cwd: conf.ROOTPATH,
                             timeout: timelimit * 1000
                         })
                         if (result.signal === "SIGTERM") console.log(chalk.red(`Test #${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
                         else if (result.status !== 0) {
                             console.log(chalk.red(`Test #${i} : Error! ⚠`))
-                            console.log(result.stderr.toString())
+                            console.log(result.stderr?.toString())
                         } else {
                             const actual = String(result.stdout).replace(/\r\n/g, '\n')
                             if (actual == expected) console.log(chalk.green(`Test #${i} : Passed! ✅`))
@@ -238,24 +281,25 @@ export class BJShell {
                 }
                 case 'lang': {
                     // TODO: set languate https://help.acmicpc.net/language/info/all
-                    if(arg[0] == 'list') {
+                    if (arg[0] == 'list') {
                         const rawint = parseInt(arg[1])
                         const col_num = isNaN(rawint) ? 3 : rawint
                         const data = []
-                        for(let i = 0; i < this.#langs.length; i+=col_num) {
+                        for (let i = 0; i < this.#langs.length; i += col_num) {
                             const row = []
-                            for(let j = 0; j < col_num; j++) {
-                                row.push(this.#langs[i+j]?.name ?? "")
-                                row.push(this.#langs[i+j]?.extension ?? "")
-                                row.push(this.#langs[i+j]?.num ?? "")
+                            for (let j = 0; j < col_num; j++) {
+                                row.push(this.#langs[i + j]?.name ?? "")
+                                row.push(this.#langs[i + j]?.extension ?? "")
+                                row.push(this.#langs[i + j]?.num ?? "")
                             }
                             data.push(row)
                         }
-                        console.log(table(data, {drawVerticalLine: i => i % 3 === 0 }))
+                        console.log(table(data, { drawVerticalLine: i => i % 3 === 0 }))
                         console.log(`To set language, type ${chalk.blueBright("lang <language number>")}`)
+                        console.log(`Before set language, check your language extension is valid. If not, modify \`compile\` and \`run\` in ${chalk.blueBright(conf.LANGPATH)}`)
                         break
                     }
-                    if (arg.length !== 1 || isNaN(parseInt(arg[0])) || !this.#langs.find(x => x.num === parseInt(arg[0]))) {
+                    if (arg.length !== 1 || isNaN(parseInt(arg[0])) || !this.findLang(parseInt(arg[0]))) {
                         console.log("lang <language number>")
                         console.log("To see language list, type lang list")
                         break
