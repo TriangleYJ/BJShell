@@ -32,6 +32,7 @@ export interface language {
     version: string,
     timelimit: string,
     memlimit: string,
+    extension: string,
     code1000: string,
 }
 
@@ -90,7 +91,7 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     const [sts, html] = await get("", "", config.LANGURL)
     if (sts !== 200) {
         console.log(sts)
-        console.log("Failed to get language list")
+        console.log("Failed to get language list from BOJ")
         return []
     }
     const $ = cheerio.load(html)
@@ -127,10 +128,22 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
         // FIXME: code1000 not working -> for testing
         // $(c).find('.CodeMirror-gutter-wrapper').remove();
         // code1000 = $(c).find('.CodeMirror-code').text();
+
+        // find extension from `Main.*` in compile or run
+        const ext_compile = compile.match(/Main\.[a-zA-Z0-9]+/g)
+        const ext_run = run.match(/Main\.[a-zA-Z0-9]+/g)
+        //if(ext_compile && ext_run && (ext_compile[0] != ext_run[0])) console.log(`Warning: ${name} has different extension in compile and run (compile: ${ext_compile[0]}, run: ${ext_run[0]}))`)
+        const extension = (ext_compile ? ext_compile[0] : ext_run ? ext_run[0] : '').replace('Main', '')
+        if(!extension) console.log(`Warning: ${name} has no extension`)
+
         arr.push({
-            name, num, compile, run, version, timelimit, memlimit, code1000
+            name, num, compile, run, version, timelimit, memlimit, extension, code1000
         })
     }
+    console.log()
+    console.log(`Loaded ${arr.length} languages from BOJ`)
+    console.log(`❗ Some languages' extension may be wrong or empty. Please check via "lang list" command and change the setting in ${config.LANGPATH} ❗`)
+
     await saveToLocalWithPath(config.LANGPATH, 'langs', arr)
     langsCache.push(...arr)
     return arr

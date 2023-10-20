@@ -246,15 +246,16 @@ export class BJShell {
                             const row = []
                             for(let j = 0; j < col_num; j++) {
                                 row.push(this.#langs[i+j]?.name ?? "")
+                                row.push(this.#langs[i+j]?.extension ?? "")
                                 row.push(this.#langs[i+j]?.num ?? "")
                             }
                             data.push(row)
                         }
-                        console.log(table(data, {drawVerticalLine: i => i % 2 === 0 }))
+                        console.log(table(data, {drawVerticalLine: i => i % 3 === 0 }))
                         console.log(`To set language, type ${chalk.blueBright("lang <language number>")}`)
                         break
                     }
-                    if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
+                    if (arg.length !== 1 || isNaN(parseInt(arg[0])) || !this.#langs.find(x => x.num === parseInt(arg[0]))) {
                         console.log("lang <language number>")
                         console.log("To see language list, type lang list")
                         break
