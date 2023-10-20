@@ -2,6 +2,7 @@ import { Response } from 'node-fetch'
 import { getResponse, postResponse } from './fetch'
 import * as cheerio from 'cheerio';
 import config from '@/config'
+import { loadFromLocal, saveToLocal } from '@/storage/localstorage';
 
 // Use as: checkLogin() === 200
 /* export async function checkLogin(token: string): Promise<[number, Response | null]> {
@@ -21,19 +22,41 @@ export class User {
     static ERR_INVALID = new Error("Invalid user token")
     #token: string = ""
     #autologin: string = ""
-    username: string = ""
-    qnum: number = 0
+    #username: string = ""
+    #qnum: number = 0
+    #lang: number = -1
 
     constructor(token: string) {
         this.#token = token
     }
 
-    setToken(token: string) {
+    async setToken(token: string) {
         this.#token = token
+        await saveToLocal('token', token)
     }
 
-    setAutologin(autologin: string) {
+    async setAutologin(autologin: string) {
         this.#autologin = autologin
+        await saveToLocal('autologin', autologin)
+    }
+
+    // setter for qnum, lang
+    async setQnum(qnum: number) {
+        this.#qnum = qnum
+        await saveToLocal('qnum', qnum)
+    }
+
+    async setLang(lang: number) {
+        this.#lang = lang
+        await saveToLocal('lang', lang)
+    }
+
+    getQnum(): number {
+        return this.#qnum
+    }
+
+    getLang(): number {
+        return this.#lang
     }
 
     getCookies(): string {
@@ -56,14 +79,27 @@ export class User {
     }
 
     async getUsername(): Promise<string> {
-        if(this.username) return new Promise(resolve => resolve(this.username))
+        if(this.#username) return new Promise(resolve => resolve(this.#username))
         let [c, resp] = await this.login()
         if (c !== 200) throw User.ERR_INVALID
         const $ = cheerio.load(await resp!.text())
         const uname = $(".username").text()
-        this.username = uname
+        this.#username = uname
         return uname
     }
+
+    
+    async loadProperties(): Promise<void> {
+        const token = await loadFromLocal('token')
+        const autologin = await loadFromLocal('autologin')
+        const qnum = await loadFromLocal('qnum')
+        const curlang = await loadFromLocal('lang')
+        if(token !== undefined) await this.setToken(token)
+        if(autologin !== undefined) await this.setAutologin(autologin)
+        if(qnum !== undefined) this.#qnum = qnum
+        if(curlang !== undefined) this.#lang = curlang
+    }
+        
 
 
 }

@@ -1,16 +1,24 @@
 import fs from 'fs/promises'
+import fss from 'fs'
 import conf from '@/config'
 
-export async function saveToLocal(name: string, value: string) {
+export async function saveToLocal(name: string, value: any) {
     // save variable to ~/.bjshell
-    const configPath = conf.CONFPATH
+    await saveToLocalWithPath(conf.CONFPATH, name, value)
+}
+
+export async function saveToLocalWithPath(path: string, name: string, value: any) {
+    // save variable to ~/.bjshell
+    const configPath = path
     let config: any = {}
     try {
         config = JSON.parse(await fs.readFile(configPath, 'utf-8'))
     } catch (e) {
         if (e instanceof Error) {
             if (e.message.includes('ENOENT')) {
-                await fs.mkdir(conf.ROOTPATH)
+                if (!fss.existsSync(conf.ROOTPATH)){
+                    await fs.mkdir(conf.ROOTPATH);
+                }
                 await fs.writeFile(configPath, JSON.stringify(config))
             } else console.log(e.message)
         } else console.log(e)
@@ -20,7 +28,11 @@ export async function saveToLocal(name: string, value: string) {
 }
 
 export async function loadFromLocal(name: string) {
-    const configPath = conf.CONFPATH
+    return await loadFromLocalWithPath(conf.CONFPATH, name)
+}
+
+export async function loadFromLocalWithPath(path: string, name: string) {
+    const configPath = path
     try {
         const config = JSON.parse(await fs.readFile(configPath, 'utf-8'))
         return config[name]

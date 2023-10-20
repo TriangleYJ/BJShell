@@ -1,6 +1,7 @@
 import config from '@/config'
 import { get } from './fetch'
 import * as cheerio from 'cheerio';
+import { loadFromLocal, loadFromLocalWithPath, saveToLocal, saveToLocalWithPath } from '@/storage/localstorage';
 
 export interface problem {
     qnum: number,
@@ -35,6 +36,7 @@ export interface language {
 }
 
 const problemCache: { [key: number]: problem } = {}
+const langsCache: language[] = []
 
 export async function getProblem(qnum: number, cookie?: string): Promise<problem | null> {
     if (problemCache[qnum]) return problemCache[qnum]
@@ -79,7 +81,12 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
     return problem
 }
 
-export async function getLanguage(): Promise<language[]> {
+export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
+    if (!forceLoad) {
+        if(langsCache.length > 0) return langsCache
+        const langs = await loadFromLocalWithPath(config.LANGPATH, 'langs')
+        if (langs) return langs
+    }
     const [sts, html] = await get("", "", config.LANGURL)
     if (sts !== 200) {
         console.log(sts)
@@ -124,6 +131,8 @@ export async function getLanguage(): Promise<language[]> {
             name, num, compile, run, version, timelimit, memlimit, code1000
         })
     }
+    await saveToLocalWithPath(config.LANGPATH, 'langs', arr)
+    langsCache.push(...arr)
     return arr
 }
 

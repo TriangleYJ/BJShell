@@ -5,10 +5,10 @@ import os from 'os'
 import { User } from '@/net/user'
 import conf from '@/config'
 import { spawn, exec, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
-import { loadFromLocal, saveToLocal } from '@/storage/localstorage'
 import kill from 'tree-kill'
-import { getProblem } from '@/net/parse'
+import { getLanguages, getProblem, language } from '@/net/parse'
 import { writeMDFile } from '@/storage/mdviewer'
+import { table } from 'table'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -22,7 +22,8 @@ export class BJShell {
     #user = new User("")
     #cp: ChildProcessWithoutNullStreams | null = null
     #prevCommand = ""
-    firstShow = true
+    #firstShow = true
+    #langs: language[] = []
 
     async setPrompt(cmd?: string) {
         if (this.#loginLock === 0) this.r.setPrompt('Enter login token: ')
@@ -30,8 +31,10 @@ export class BJShell {
         else {
             const rawdir = chalk.green(process.cwd());
             const dir = rawdir.replace(os.homedir(), "~")
+            const curlangname = this.#langs.find(x => x.num === this.#user.getLang())?.name ?? ""
             const prefix = `👤 ${chalk.blueBright(await this.#user.getUsername())}`
-                + (this.#user.qnum ? ` | 🚩 ${chalk.yellow(this.#user.qnum)}` : "")
+                + (this.#user.getQnum() ? ` | 🚩 ${chalk.yellow(this.#user.getQnum())}` : "" )
+                + (this.#user.getLang() !== -1 ? ` | 🌐 ${chalk.yellow(curlangname)}` : "" )
             this.r.setPrompt(`(${prefix}) ${dir} BJ> `)
         }
         if (cmd !== 'exec') this.r.prompt()
@@ -49,17 +52,14 @@ export class BJShell {
     async #loginGuardOnLine(line: string) {
         if (this.#loginLock === 2) return false
         if (this.#loginLock === 0) {
-            this.#user.setToken(line)
-            if (await this.#user.checkLogin() === 200) {
-                this.#loginLock = 1
-                await saveToLocal('token', line)
-            }
+            await this.#user.setToken(line)
+            if (await this.#user.checkLogin() === 200) this.#loginLock = 1
             else console.log("Invaild token")
             await this.setPrompt()
         } else if (this.#loginLock === 1) {
-            this.#user.setAutologin(line)
+            await this.#user.setAutologin(line)
             this.#loginLock = 2
-            await saveToLocal('autologin', line)
+            await getLanguages(true)
             await this.setPrompt()
         }
         return true
@@ -119,10 +119,8 @@ export class BJShell {
                     break
                 }
                 case 'logout': {
-                    this.#user.setToken("")
-                    this.#user.setAutologin("")
-                    await saveToLocal('token', "")
-                    await saveToLocal('autologin', "")
+                    await this.#user.setToken("")
+                    await this.#user.setAutologin("")
                     this.#loginLock = 0
                     console.log("Logged out")
                     break
@@ -137,8 +135,7 @@ export class BJShell {
                         console.log("Invaild question number")
                         break
                     }
-                    this.#user.qnum = parseInt(arg[0])
-                    await saveToLocal('qnum', arg[0])
+                    await this.#user.setQnum(parseInt(arg[0]))
                     console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
                     
                     await writeMDFile(question)
@@ -148,8 +145,8 @@ export class BJShell {
                 case 'show': {
                         // run vscode
                     exec(`code ${conf.MDPATH}`)
-                    if(this.firstShow) {
-                        this.firstShow = false
+                    if(this.#firstShow) {
+                        this.#firstShow = false
                         console.log("MD file opened in VSCode")
                         console.log("※  If your file is not changed, press ... and click 'Refresh Preview'")
                         console.log("※  If you see the raw code, not preview, follow below in VSCode.")
@@ -166,8 +163,7 @@ export class BJShell {
                     break
                 }
                 case 'unset': {
-                    this.#user.qnum = 0
-                    await saveToLocal('qnum', "0")
+                    await this.#user.setQnum(0)
                     break
                 }
                 case 'exec': {
@@ -203,7 +199,7 @@ export class BJShell {
                 }
                 case 't':
                 case 'test': {
-                    const question = await getProblem(this.#user.qnum)
+                    const question = await getProblem(this.#user.getQnum())
                     if (question === null) {
                         console.log("Invaild question number")
                         break
@@ -242,6 +238,29 @@ export class BJShell {
                 }
                 case 'lang': {
                     // TODO: set languate https://help.acmicpc.net/language/info/all
+                    if(arg[0] == 'list') {
+                        const rawint = parseInt(arg[1])
+                        const col_num = isNaN(rawint) ? 3 : rawint
+                        const data = []
+                        for(let i = 0; i < this.#langs.length; i+=col_num) {
+                            const row = []
+                            for(let j = 0; j < col_num; j++) {
+                                row.push(this.#langs[i+j]?.name ?? "")
+                                row.push(this.#langs[i+j]?.num ?? "")
+                            }
+                            data.push(row)
+                        }
+                        console.log(table(data, {drawVerticalLine: i => i % 2 === 0 }))
+                        console.log(`To set language, type ${chalk.blueBright("lang <language number>")}`)
+                        break
+                    }
+                    if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
+                        console.log("lang <language number>")
+                        console.log("To see language list, type lang list")
+                        break
+                    }
+                    await this.#user.setLang(parseInt(arg[0]))
+                    break
                 }
                 default: {
                     console.log("Unknown Command")
@@ -282,15 +301,8 @@ export class BJShell {
         console.log()
 
         // Load config
-        const token = await loadFromLocal('token')
-        const autologin = await loadFromLocal('autologin')
-        const qnum = await loadFromLocal('qnum')
-        if (token) {
-            this.#user.setToken(token)
-            if (autologin) this.#user.setAutologin(autologin)
-        }
-        if (qnum) this.#user.qnum = parseInt(qnum)
-
+        this.#langs = await getLanguages()
+        await this.#user.loadProperties()
         await this.#loginGuard()
         await this.setPrompt()
     }

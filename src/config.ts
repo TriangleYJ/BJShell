@@ -8,6 +8,7 @@ export default {
     LANGURL: 'https://help.acmicpc.net/language/info',
     MDPATH: `${os.homedir()}/.bjshell/problem.md`,
     CONFPATH: `${os.homedir()}/.bjshell/config.json`,
+    LANGPATH: `${os.homedir()}/.bjshell/lang.json`,
     ROOTPATH: `${os.homedir()}/.bjshell`,
 
     // PROBLEM_MD: '.bjshell/problem.md',

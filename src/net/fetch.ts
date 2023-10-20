@@ -2,6 +2,7 @@ import config from '@/config'
 import fetch from 'node-fetch'
 
 export async function getResponse(path: string, cookie?: string, url?: string) {
+    //console.log("Fetch called:", url, path)
     return fetch(url ?? config.URL + path, {
         "headers": {
             "user-agent": config.USER_AGENT,
