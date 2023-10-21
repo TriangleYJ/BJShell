@@ -4,7 +4,7 @@ import os from 'os'
 import { User } from '@/net/user'
 import {  ChildProcessWithoutNullStreams } from 'child_process'
 import kill from 'tree-kill'
-import { getLanguages, language } from '@/net/parse'
+import { getLanguage, getLanguages, language } from '@/net/parse'
 import acquireAllCommands from './command'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
@@ -17,13 +17,12 @@ export class BJShell {
     })
     user = new User("")
     cp: ChildProcessWithoutNullStreams | null = null
-    langs: language[] = []
     #loginLock: LoginLock = 2
     #prevCommand = ""
     firstshow = true
 
     findLang(num?: number): language | undefined {
-        return this.langs.find(x => x.num === (num ?? this.user.getLang()))
+        return getLanguage(this.user.getLang())
     }
 
     setLoginLock(lock: LoginLock) {
@@ -66,7 +65,7 @@ export class BJShell {
             this.#loginLock = 2
             console.log(chalk.green("Login success"))
             console.log()
-            this.langs = await getLanguages(true)
+            await getLanguages(true)
             await this.setPrompt()
         }
         return true
@@ -128,7 +127,7 @@ export class BJShell {
 
         // Load config
         await this.user.loadProperties()
-        if(await this.#loginGuard()) this.langs = await getLanguages()
+        if(await this.#loginGuard()) await getLanguages()
         await this.setPrompt()
     }
 }

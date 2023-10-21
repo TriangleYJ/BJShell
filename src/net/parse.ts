@@ -33,7 +33,7 @@ export interface language {
     timelimit: string,
     memlimit: string,
     extension: string,
-    code1000: string,
+    commentmark: string,
 }
 
 const problemCache: { [key: number]: problem } = {}
@@ -86,8 +86,36 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     if (!forceLoad) {
         if(langsCache.length > 0) return langsCache
         const langs = await loadFromLocalWithPath(config.LANGPATH, 'langs')
-        if (langs) return langs
+        if (langs) {
+            langsCache.push(...langs)
+            return langs
+        }
     }
+
+    const LANG_COMMENTS_HARDCODED = [
+        [".js", "//"],      // JavaScript
+        [".py", "#"],       // Python
+        [".java", "//"],    // Java
+        [".cc", "//"],      // C++
+        [".cpp", "//"],     // C++
+        [".cs", "//"],      // CSharp
+        [".c", "//"],       // C
+        [".php", "//"],     // PHP
+        [".rb", "#"],       // Ruby
+        [".swift", "//"],   // Swift
+        [".go", "//"],      // Go
+        [".ts", "//"],      // TypeScript
+        [".rs", "//"],      // Rust
+        [".kt", "//"],      // Kotlin
+        [".dart", "//"],    // Dart
+        [".lua", "--"],     // Lua
+        [".sh", "#"],       // Shell Script
+        [".vb", "'"],       // Visual Basic
+        [".pl", "#"],       // Perl
+        [".scala", "//"],   // Scala
+        [".matlab", "%"],   // MATLAB
+        [".r", "#"],        // R
+    ];
     const [sts, html] = await get("", "", config.LANGURL)
     if (sts !== 200) {
         console.log(sts)
@@ -135,9 +163,10 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
         //if(ext_compile && ext_run && (ext_compile[0] != ext_run[0])) console.log(`Warning: ${name} has different extension in compile and run (compile: ${ext_compile[0]}, run: ${ext_run[0]}))`)
         const extension = (ext_compile ? ext_compile[0] : ext_run ? ext_run[0] : '').replace('Main', '')
         if(!extension) console.log(`Warning: ${name} has no extension`)
+        const commentmark = LANG_COMMENTS_HARDCODED.find(x => x[0] === extension)?.[1] ?? ''
 
         arr.push({
-            name, num, compile, run, version, timelimit, memlimit, extension, code1000
+            name, num, compile, run, version, timelimit, memlimit, extension, commentmark
         })
     }
     console.log()
@@ -147,6 +176,19 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     await saveToLocalWithPath(config.LANGPATH, 'langs', arr)
     langsCache.push(...arr)
     return arr
+}
+
+export function getLanguage(langnum: number): language | undefined {
+    return langsCache.find(x => x.num === langnum)
+}
+
+export function setLanguageCommentMark(langnum: number, commentmark: string) {
+    const langIdx = langsCache.findIndex(x => x.num === langnum)
+    if (langIdx < 0) return false
+    langsCache[langIdx].commentmark = commentmark
+    console.log(langsCache[langIdx].commentmark)
+
+    saveToLocalWithPath(config.LANGPATH, 'langs', langsCache)
 }
 
 // (async () => {

@@ -24,7 +24,7 @@ export async function saveToLocalWithPath(path: string, name: string, value: any
         } else console.log(e)
     }
     config[name] = value
-    await fs.writeFile(configPath, JSON.stringify(config))
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2))
 }
 
 export async function loadFromLocal(name: string) {
