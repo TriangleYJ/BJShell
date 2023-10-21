@@ -9,6 +9,7 @@ import kill from 'tree-kill'
 import { getLanguages, getProblem, language, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
+import { postResponse } from "@/net/fetch"
 
 interface Command {
     desc: string
@@ -53,7 +54,8 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
     async function set() {
         if (arg.length === 0 && that.user.getQnum() !== 0)
             arg.push(String(that.user.getQnum()))
-        if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
+        const val = parseInt(arg[0])
+        if (arg.length !== 1 || isNaN(val) || val < 0) {
             console.log("set <question number>")
             return
         }
@@ -62,12 +64,13 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
             console.log("Set language first")
             return
         }
-        const question = await getProblem(parseInt(arg[0]), that.user.getCookies())
+        const question = await getProblem(val, that.user.getCookies())
         if (question === null) {
             console.log("Invaild question number")
             return
         }
-        await that.user.setQnum(parseInt(arg[0]))
+        // ASSERT val is valid qnum
+        await that.user.setQnum(val, question)
         console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
 
         // TODO: Add Comment to answer sheet
@@ -152,7 +155,7 @@ ${cmark}
     }
 
     async function test() {
-        const question = await getProblem(that.user.getQnum())
+        const question = await that.user.getCurProblem()
         if (question === null) {
             console.log("Invaild question number")
             return
@@ -247,6 +250,18 @@ ${cmark}
         await that.user.setLang(parseInt(arg[0]))
     }
 
+    async function submit() {
+        const filepath = `${process.cwd()}/${that.user.getQnum()}${that.findLang()?.extension ?? ""}`
+        try{
+            const code = await fs.readFile(filepath, 'utf-8')
+            await that.user.submit(code)
+            // TODO: show status
+        } catch(e) {
+            if(e instanceof Error) console.log(e.message)
+            else console.log(e)
+        }
+    }
+
     const commands = {
         "help": {
             desc: "Show help",
@@ -312,6 +327,11 @@ Usage: lang <language number>`,
             func: lang,
             alias: "l",
         },
+        "submit": {
+            desc: `Submit your code to BOJ using set language and question number in BJ Shell.`,
+            func: submit,
+            alias: "sb",
+        }
     }
 
     return commands

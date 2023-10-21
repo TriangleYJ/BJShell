@@ -3,6 +3,7 @@ import { getResponse, postResponse } from './fetch'
 import * as cheerio from 'cheerio';
 import config from '@/config'
 import { loadFromLocal, saveToLocal } from '@/storage/localstorage';
+import { getProblem, problem } from './parse';
 
 // Use as: checkLogin() === 200
 /* export async function checkLogin(token: string): Promise<[number, Response | null]> {
@@ -24,6 +25,7 @@ export class User {
     #autologin: string = ""
     #username: string = ""
     #qnum: number = 0
+    curprob: problem | null = null
     #lang: number = -1
 
     constructor(token: string) {
@@ -41,8 +43,9 @@ export class User {
     }
 
     // setter for qnum, lang
-    async setQnum(qnum: number) {
+    async setQnum(qnum: number, problem?: problem) {
         this.#qnum = qnum
+        this.curprob = problem ?? null
         await saveToLocal('qnum', qnum)
     }
 
@@ -73,8 +76,16 @@ export class User {
         return (await this.login())[0]
     }
 
-    async post(path: string, data: string): Promise<Response> {
-        const resp = await postResponse(path, data, this.getCookies())
+    async getCurProblem(): Promise<problem | null> {
+        if(this.#qnum !== this.curprob?.qnum) this.curprob = await getProblem(this.#qnum, this.getCookies())
+        return this.curprob
+    }
+
+    async submit(code: string): Promise<Response> {
+        const csrf = (await this.getCurProblem())?.csrf
+        if(!csrf) console.log("Submit failed, csrf_token not found")
+        const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`, `problem_id=${this.#qnum}&language=${this.#lang}&code_open=close&source=${encodeURIComponent(code)}&csrf_key=${csrf}`, this.getCookies())
+        if(resp.status !== 200) console.log("Submit failed, status code: " + resp.status)
         return resp
     }
 

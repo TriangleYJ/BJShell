@@ -17,8 +17,9 @@ export async function postResponse(path: string, body: string, cookie: string) {
     return fetch(config.URL + path, {
         "headers": {
             "user-agent": config.USER_AGENT,
+            "content-type": "application/x-www-form-urlencoded",
             "Referer": config.URL,
-            "Cookie": cookie ?? ""
+            "cookie": cookie ?? ""
         },
         "body": body,
         "method": "POST"

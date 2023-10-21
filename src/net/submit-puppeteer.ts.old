@@ -1,0 +1,85 @@
+import puppeteer from "puppeteer";
+import { Browser, Page } from "puppeteer";
+import config from "@/config";
+
+export class Submitter {
+    #browser: Browser | null;
+    #page: Page | null;
+
+    constructor() {
+        this.#browser = null;
+        this.#page = null;
+    }
+
+    async init(token: string, autologin: string) {
+        this.#browser = await puppeteer.launch({
+            headless: false,
+            defaultViewport: null,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        this.#page = await this.#browser.newPage();
+        const cookies = [{
+            name: 'OnlineJudge',
+            value: token,
+            domain: '.acmicpc.net',
+            path: '/',
+            httpOnly: true,
+            secure: true
+        }, 
+        {
+            name: 'bojautologin',
+            value: autologin,
+            domain: '.acmicpc.net',
+            path: '/',
+            httpOnly: true,
+            secure: true
+        }]
+        await this.#page.setCookie(...cookies);
+        await this.#page.goto('https://www.acmicpc.net');
+        const username = await this.#page.evaluate(() => {
+            const loginElem: any = document.querySelector(".username")
+            return loginElem.text()
+        })
+        console.log(username)
+    }
+
+    async submit(qnum: number, lang: number, csrf: string) {
+        if(this.#page == null) return;
+        const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
+        try{
+            await this.#page.goto(`${config.URL}${config.SUBMIT}${qnum}`)
+            await wait(1000)
+            await this.#page.waitForSelector('form')
+            await this.#page.evaluate((lang, code) => {
+                const langElem: any = document.querySelector('#language')
+                langElem.value = lang
+                const codeElem: any = document.querySelector('.CodeMirror')
+                codeElem.CodeMirror.setValue(code)
+                const subElem: any = document.querySelector('#submit_button')
+                subElem.click()
+            }, qnum, lang)
+
+            let finish = false
+            console.log("[#" + qnum + "] Code submited.")
+            await wait(1000)
+
+            while(!finish){
+                await wait(1000)
+                let element = await this.#page.$('td.result > span')
+                let res = await this.#page.evaluate(el => el?.textContent, element)
+                if(!res) break;
+                process.stdout.clearLine(0);
+                process.stdout.cursorTo(0);
+                process.stdout.write("[#" + qnum + "] " + res); // end the line
+                if(res == '기다리는 중' || res.includes('채점')) finish = false
+                else finish = true
+            }
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
+    async close() {
+        await this.#browser?.close();
+    }
+}

@@ -21,6 +21,7 @@ export interface problem {
     testcases: { input: string, output: string, explain?: string }[]
     hint?: string,
     problem_limit?: string,
+    csrf?: string,
     html: string
 }
 
@@ -36,11 +37,9 @@ export interface language {
     commentmark: string,
 }
 
-const problemCache: { [key: number]: problem } = {}
 const langsCache: language[] = []
 
 export async function getProblem(qnum: number, cookie?: string): Promise<problem | null> {
-    if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
     const [sts, html] = await get(`${config.PROB}${qnum}`, cookie ?? undefined)
     if (sts !== 200) return null
@@ -65,6 +64,16 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
     const title = $('#problem_title').text()
     const rawHtml = $('body')
 
+
+    let csrf;
+    if (cookie) {
+        const [ssts, shtml] = await get(`${config.SUBMIT}${qnum}`, cookie ?? undefined)
+        if (ssts === 200) {
+            const $ = cheerio.load(shtml)
+            csrf = $('input[name=csrf_key]').val()?.toString()
+        }
+    }
+
     const problem = {
         qnum: qnum,
         title,
@@ -76,15 +85,15 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
         testcases: testcases,
         hint: wsr($('#problem_hint').text()).trim() || undefined,
         problem_limit: wsr($('#problem_limit').text()).trim() || undefined,
+        csrf,
         html: rawHtml.html() || ""
     }
-    problemCache[qnum] = problem
     return problem
 }
 
 export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     if (!forceLoad) {
-        if(langsCache.length > 0) return langsCache
+        if (langsCache.length > 0) return langsCache
         const langs = await loadFromLocalWithPath(config.LANGPATH, 'langs')
         if (langs) {
             langsCache.push(...langs)
@@ -162,7 +171,7 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
         const ext_run = run.match(/Main\.[a-zA-Z0-9]+/g)
         //if(ext_compile && ext_run && (ext_compile[0] != ext_run[0])) console.log(`Warning: ${name} has different extension in compile and run (compile: ${ext_compile[0]}, run: ${ext_run[0]}))`)
         const extension = (ext_compile ? ext_compile[0] : ext_run ? ext_run[0] : '').replace('Main', '')
-        if(!extension) console.log(`Warning: ${name} has no extension`)
+        if (!extension) console.log(`Warning: ${name} has no extension`)
         const commentmark = LANG_COMMENTS_HARDCODED.find(x => x[0] === extension)?.[1] ?? ''
 
         arr.push({
