@@ -22,7 +22,7 @@ export class BJShell {
     firstshow = true
 
     findLang(num?: number): language | undefined {
-        return getLanguage(this.user.getLang())
+        return getLanguage(num ?? this.user.getLang())
     }
 
     setLoginLock(lock: LoginLock) {

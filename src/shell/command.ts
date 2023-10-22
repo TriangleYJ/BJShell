@@ -3,7 +3,7 @@ import fs from "fs/promises"
 import chalk from "chalk"
 import conf from '@/config'
 import { spawn, exec, spawnSync } from 'child_process'
-import { getLanguages, getProblem, setLanguageCommentMark } from '@/net/parse'
+import { getLanguages, getProblem, language, problem, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
 
@@ -150,20 +150,27 @@ ${cmark}
         that.cp = null
     }
 
-    async function test() {
+    async function _checkInfo(): Promise<[problem, language] | null> {
         const question = await getProblem(that.user.getQnum())
         if (question === null) {
             console.log("Invaild question number")
-            return
+            return null
         }
-        console.log(`===== Testcase: ${question.qnum}. ${question.title} =====`)
-        let success: number = 0
-        // TODO: custom testcases
         const lang = that.findLang()
         if (lang === undefined) {
             console.log("Set language first")
-            return
+            return null
         }
+        return [question, lang]
+    }
+
+    async function test() {
+        const info = await _checkInfo()
+        if (!info) return
+        const [question, lang] = info
+        console.log(`===== Testcase: ${question.qnum}. ${question.title} =====`)
+        let success: number = 0
+        // TODO: custom testcases
         const extension = lang.extension ?? ""
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
         if (!await writeMainTmp(filepath, extension)) return
@@ -238,16 +245,21 @@ ${cmark}
             console.log(`Before set language, check your language extension is valid. If not, modify \`compile\` and \`run\` in ${chalk.blueBright(conf.LANGPATH)}`)
             return
         }
-        if (arg.length !== 1 || isNaN(parseInt(arg[0])) || !that.findLang(parseInt(arg[0]))) {
+        if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
             console.log("lang <language number>")
             console.log("To see language list, type lang list")
+            return
+        } else if (!that.findLang(parseInt(arg[0]))) {
+            console.log("Invaild language number")
             return
         }
         await that.user.setLang(parseInt(arg[0]))
     }
 
     async function submit() {
-        const question = await getProblem(that.user.getQnum())
+        const info = await _checkInfo()
+        if (!info) return
+        const [question, _] = info
         console.log(`===== Submission: ${question!.qnum}. ${question!.title} =====`)
         const filepath = `${process.cwd()}/${that.user.getQnum()}${that.findLang()?.extension ?? ""}`
         try{
@@ -299,7 +311,8 @@ ${cmark}
         },
         "exit": {
             desc: "Exit BJ Shell",
-            func: () => { that.r.close() }
+            func: () => { that.r.close() },
+            alias: "x"
         },
         "pwd": {
             desc: "Print working directory",
