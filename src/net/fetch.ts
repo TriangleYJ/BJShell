@@ -13,12 +13,13 @@ export async function getResponse(path: string, cookie?: string, url?: string) {
     })
 }
 
-export async function postResponse(path: string, body: string, cookie: string) {
+export async function postResponse(path: string, body: string, cookie: string, headers?: { [key: string]: string }) {
     return fetch(config.URL + path, {
         "headers": {
             "user-agent": config.USER_AGENT,
-            "content-type": "application/x-www-form-urlencoded",
+            "content-type": "application/x-www-form-urlencoded, charset=UTF-8",
             "Referer": config.URL,
+            ...headers,
             "cookie": cookie ?? ""
         },
         "body": body,

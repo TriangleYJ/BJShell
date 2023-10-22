@@ -1,15 +1,11 @@
 import { BJShell } from "."
 import fs from "fs/promises"
 import chalk from "chalk"
-import os from 'os'
-import { User } from '@/net/user'
 import conf from '@/config'
-import { spawn, exec, spawnSync, ChildProcessWithoutNullStreams } from 'child_process'
-import kill from 'tree-kill'
-import { getLanguages, getProblem, language, setLanguageCommentMark } from '@/net/parse'
+import { spawn, exec, spawnSync } from 'child_process'
+import { getLanguages, getProblem, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
-import { postResponse } from "@/net/fetch"
 
 interface Command {
     desc: string
@@ -70,7 +66,7 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
             return
         }
         // ASSERT val is valid qnum
-        await that.user.setQnum(val, question)
+        await that.user.setQnum(val)
         console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
 
         // TODO: Add Comment to answer sheet
@@ -155,7 +151,7 @@ ${cmark}
     }
 
     async function test() {
-        const question = await that.user.getCurProblem()
+        const question = await getProblem(that.user.getQnum())
         if (question === null) {
             console.log("Invaild question number")
             return
@@ -251,11 +247,37 @@ ${cmark}
     }
 
     async function submit() {
+        const question = await getProblem(that.user.getQnum())
+        console.log(`===== Submission: ${question!.qnum}. ${question!.title} =====`)
         const filepath = `${process.cwd()}/${that.user.getQnum()}${that.findLang()?.extension ?? ""}`
         try{
             const code = await fs.readFile(filepath, 'utf-8')
-            await that.user.submit(code)
-            // TODO: show status
+            const subId = await that.user.submit(code)
+            if(subId === -1) return
+            console.log(`문제를 제출했습니다!`)
+            for (let sec = 0; sec < 60; sec++) {
+                const result = await that.user.submitStatus(subId)
+                if(result === null) {
+                    console.log(`Failed to get result of submission ${subId}`)
+                    return
+                }
+                const result_num = parseInt(result.result)
+                if(isNaN(result_num)) {
+                    console.log(`Failed to parse result of submission ${subId}`)
+                    return
+                }
+                process.stdout.clearLine(0);
+                process.stdout.cursorTo(0);
+                if(result_num >= 4) {
+                    const info = result_num === 4 ? 
+                        `${chalk.green(result.result_name)} | Time: ${result.time} ms | Memory: ${result.memory} KB`: 
+                        `${chalk.red(result.result_name)}`
+                    console.log(info)
+                    break
+                }
+                process.stdout.write(`${result.result_name} (${sec} s passed)`); // end the line
+                await new Promise(resolve => setTimeout(resolve, 1000))
+            }
         } catch(e) {
             if(e instanceof Error) console.log(e.message)
             else console.log(e)
@@ -303,7 +325,8 @@ Usage: set <question number> or set`,
         },
         "show": {
             desc: "Show problem.md file in VSCode",
-            func: show
+            func: show,
+            alias: "w"
         },
         "unset": {
             desc: "Unset question number",
@@ -330,7 +353,11 @@ Usage: lang <language number>`,
         "submit": {
             desc: `Submit your code to BOJ using set language and question number in BJ Shell.`,
             func: submit,
-            alias: "sb",
+            alias: "b",
+        },
+        "sbstatus": {
+            desc: `Show status of given submission ID. (for developing)`,
+            func: async () => console.log(await that.user.submitStatus(parseInt(arg[0]))),
         }
     }
 

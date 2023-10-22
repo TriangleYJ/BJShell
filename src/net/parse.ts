@@ -21,10 +21,10 @@ export interface problem {
     testcases: { input: string, output: string, explain?: string }[]
     hint?: string,
     problem_limit?: string,
-    csrf?: string,
     html: string
 }
 
+const problemCache: { [key: number]: problem } = {}
 export interface language {
     name: string,
     num: number,
@@ -40,6 +40,7 @@ export interface language {
 const langsCache: language[] = []
 
 export async function getProblem(qnum: number, cookie?: string): Promise<problem | null> {
+    if (problemCache[qnum]) return problemCache[qnum]
     const wsr = (s: string) => s.replace(/\xA0/g, " ")
     const [sts, html] = await get(`${config.PROB}${qnum}`, cookie ?? undefined)
     if (sts !== 200) return null
@@ -64,16 +65,6 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
     const title = $('#problem_title').text()
     const rawHtml = $('body')
 
-
-    let csrf;
-    if (cookie) {
-        const [ssts, shtml] = await get(`${config.SUBMIT}${qnum}`, cookie ?? undefined)
-        if (ssts === 200) {
-            const $ = cheerio.load(shtml)
-            csrf = $('input[name=csrf_key]').val()?.toString()
-        }
-    }
-
     const problem = {
         qnum: qnum,
         title,
@@ -85,9 +76,9 @@ export async function getProblem(qnum: number, cookie?: string): Promise<problem
         testcases: testcases,
         hint: wsr($('#problem_hint').text()).trim() || undefined,
         problem_limit: wsr($('#problem_limit').text()).trim() || undefined,
-        csrf,
         html: rawHtml.html() || ""
     }
+    problemCache[qnum] = problem
     return problem
 }
 
@@ -200,5 +191,22 @@ export function setLanguageCommentMark(langnum: number, commentmark: string) {
     saveToLocalWithPath(config.LANGPATH, 'langs', langsCache)
 }
 
+export async function getCSRFToken(cookie: string, qnum: number): Promise<string | null> {
+    const [sts, html] = await get(`${config.SUBMIT}${qnum}`, cookie ?? undefined)
+    if (sts === 200) {
+        const $ = cheerio.load(html)
+        const csrf = $('input[name=csrf_key]').val()?.toString()
+        if(csrf) return csrf
+    }
+    return null
+}
+
+export function getSubmissionId(html: string): number{
+    const $ = cheerio.load(html)
+    const m = $("tbody > tr:nth-child(1) > td:nth-child(1)").text()
+    const val = parseInt(m)
+    if(!isNaN(val)) return val
+    return -1
+}
 // (async () => {
 //     console.log(await getLanguage())})()

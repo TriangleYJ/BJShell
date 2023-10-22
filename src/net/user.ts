@@ -3,7 +3,7 @@ import { getResponse, postResponse } from './fetch'
 import * as cheerio from 'cheerio';
 import config from '@/config'
 import { loadFromLocal, saveToLocal } from '@/storage/localstorage';
-import { getProblem, problem } from './parse';
+import { getSubmissionId, getCSRFToken } from './parse';
 
 // Use as: checkLogin() === 200
 /* export async function checkLogin(token: string): Promise<[number, Response | null]> {
@@ -25,7 +25,6 @@ export class User {
     #autologin: string = ""
     #username: string = ""
     #qnum: number = 0
-    curprob: problem | null = null
     #lang: number = -1
 
     constructor(token: string) {
@@ -43,9 +42,8 @@ export class User {
     }
 
     // setter for qnum, lang
-    async setQnum(qnum: number, problem?: problem) {
+    async setQnum(qnum: number) {
         this.#qnum = qnum
-        this.curprob = problem ?? null
         await saveToLocal('qnum', qnum)
     }
 
@@ -76,17 +74,37 @@ export class User {
         return (await this.login())[0]
     }
 
-    async getCurProblem(): Promise<problem | null> {
-        if(this.#qnum !== this.curprob?.qnum) this.curprob = await getProblem(this.#qnum, this.getCookies())
-        return this.curprob
+    async submit(code: string): Promise<number> {
+        const csrf = await getCSRFToken(this.getCookies(), this.#qnum)
+        if(!csrf){
+            console.log("Submit failed, csrf_token not found")
+            return -1
+        }
+        const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`, 
+            `problem_id=${this.#qnum}&language=${this.#lang}&code_open=close&source=${encodeURIComponent(code)}&csrf_key=${csrf}`,
+            this.getCookies())
+        if(resp.status !== 200) {
+            console.log("Submit failed, status code: " + resp.status)
+            return -1
+        }
+        const subId = getSubmissionId(await resp.text())
+        if(subId === -1) console.log("Submit failed, submission id not found")
+        return subId
     }
 
-    async submit(code: string): Promise<Response> {
-        const csrf = (await this.getCurProblem())?.csrf
-        if(!csrf) console.log("Submit failed, csrf_token not found")
-        const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`, `problem_id=${this.#qnum}&language=${this.#lang}&code_open=close&source=${encodeURIComponent(code)}&csrf_key=${csrf}`, this.getCookies())
-        if(resp.status !== 200) console.log("Submit failed, status code: " + resp.status)
-        return resp
+    async submitStatus(subId: number): Promise<{result: string, result_name: string, time: string, memory: string} | null> {
+        const resp = await postResponse(`${config.SUBMITSTAT}`, `solution_id=${subId}`, this.getCookies(), {"x-requested-with": "XMLHttpRequest"})
+        if(resp.status !== 200) {
+            console.log(`Submit status failed, status code: ${resp.status}, subId: ${subId}`)
+            return null
+        }
+        const json = await resp.text()  
+        const obj = JSON.parse(json)
+        if(obj.error) {
+            console.log(`Submit status failed, error: Internal server error, subId: ${subId}`)
+            return null
+        }
+        return {...obj}
     }
 
     async getUsername(): Promise<string> {
