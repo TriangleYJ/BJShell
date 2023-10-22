@@ -3,7 +3,7 @@ import fs from "fs/promises"
 import chalk from "chalk"
 import conf from '@/config'
 import { spawn, exec, spawnSync } from 'child_process'
-import { getLanguages, getProblem, language, problem, setLanguageCommentMark } from '@/net/parse'
+import { getLanguages, getProblem, language, parseTestCasesFromLocal, problem, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
 
@@ -191,9 +191,12 @@ ${cmark}
                 return
             }
         }
-
-        for (const i in question.testcases) {
-            const t = question.testcases[i]
+        
+        const localtestcases = await parseTestCasesFromLocal(filepath)
+        const testcases = [...question.testcases, ...localtestcases]
+        for (const i in testcases) {
+            const prefix = parseInt(i) >= question.testcases.length ? "(local) Test #" : "Test #"
+            const t = testcases[i]
             const expected = t.output.replace(/\r\n/g, '\n')
             // default timelimit: stat.timelimit * 2
             // TODO: timelimit from language
@@ -204,25 +207,25 @@ ${cmark}
                 cwd: conf.ROOTPATH,
                 timeout: timelimit * 1000
             })
-            if (result.signal === "SIGTERM") console.log(chalk.red(`Test #${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
+            if (result.signal === "SIGTERM") console.log(chalk.red(`${prefix}${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
             else if (result.status !== 0) {
-                console.log(chalk.red(`Test #${i} : Error! ⚠`))
+                console.log(chalk.red(`${prefix}${i} : Error! ⚠`))
                 console.log(result.stderr?.toString())
             } else {
                 const actual = String(result.stdout).replace(/\r\n/g, '\n')
                 if (actual.trim() == expected.trim()) {
-                    console.log(chalk.green(`Test #${i} : Passed! ✅`))
+                    console.log(chalk.green(`${prefix}${i} : Passed! ✅`))
                     success += 1
                 }
                 else {
-                    console.log(chalk.red(`Test #${i} : Failed! ❌`))
+                    console.log(chalk.red(`${prefix}${i} : Failed! ❌`))
                     console.log(`Expected: ${expected.trim()}`);
                     console.log(`Actual: ${actual.trim()}`);
                 }
             }
         }
-        if (success === question.testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
-        else console.log(chalk.yellow(`${success} / ${question.testcases.length} testcase passed`));
+        if (success === testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
+        else console.log(chalk.yellow(`${success} / ${testcases.length} testcase passed`));
     }
 
     async function lang() {
