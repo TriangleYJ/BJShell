@@ -372,9 +372,10 @@ Usage: lang <language number>`,
             func: submit,
             alias: "b",
         },
-        "sbstatus": {
-            desc: `Show status of given submission ID. (for developing)`,
-            func: async () => console.log(await that.user.submitStatus(parseInt(arg[0]))),
+        "google": {
+            desc: `Search current problem in Google`,
+            func: () => console.log(`https://www.google.com/search?q=%EB%B0%B1%EC%A4%80+${that.user.getQnum()}+${encodeURIComponent(that.findLang()?.name ?? "")}`),
+            alias: "g",
         }
     }
 
