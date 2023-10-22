@@ -1,9 +1,8 @@
-import os from 'os'
 import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import conf from '@/config'
 import { problem } from '@/net/parse'
-import { NodeHtmlMarkdown, NodeHtmlMarkdownOptions } from 'node-html-markdown'
+import { NodeHtmlMarkdown } from 'node-html-markdown'
 import * as cheerio from 'cheerio';
 
 
@@ -39,7 +38,7 @@ export async function writeMDFile(problem: problem) {
     content.find('[style*="display: none;"]').remove(); // remove hidden base64 elements
 
     [['a', 'href'], ['img', 'src']].forEach(([tag, attr]) => { // replace link to absolute path
-        $(tag).each(function () { 
+        $(tag).each(function () {
             var href = $(this).attr(attr);
 
             if (href && href.startsWith('/')) {
@@ -57,7 +56,7 @@ export async function writeMDFile(problem: problem) {
 }
 
 export async function writeFile(path: string, content: string, force?: boolean) {
-    if(!force && existsSync(path)) return false
+    if (!force && existsSync(path)) return false
     await fs.writeFile(path, content)
     return true
 }
@@ -65,10 +64,10 @@ export async function writeFile(path: string, content: string, force?: boolean) 
 export async function writeMainTmp(src: string, ext: string) {
     // copy file in src and overwrite to ~/.bjshell/Main.${extension}
     const path = `${conf.ROOTPATH}/Main${ext}`
-    try{
+    try {
         await fs.copyFile(src, path)
-    } catch(e) {
-        if(e instanceof Error) console.log(e.message)
+    } catch (e) {
+        if (e instanceof Error) console.log(e.message)
         else console.log(e)
         return false
     }

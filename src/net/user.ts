@@ -66,7 +66,7 @@ export class User {
 
     async login(): Promise<[number, Response | null]> {
         const resp = await getResponse(config.MODIFY, this.getCookies())
-        if(resp.url.includes('login')) return [302, null]
+        if (resp.url.includes('login')) return [302, null]
         return [resp.status, resp]
     }
 
@@ -76,39 +76,39 @@ export class User {
 
     async submit(code: string): Promise<number> {
         const csrf = await getCSRFToken(this.getCookies(), this.#qnum)
-        if(!csrf){
+        if (!csrf) {
             console.log("Submit failed, csrf_token not found")
             return -1
         }
-        const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`, 
+        const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`,
             `problem_id=${this.#qnum}&language=${this.#lang}&code_open=close&source=${encodeURIComponent(code)}&csrf_key=${csrf}`,
             this.getCookies())
-        if(resp.status !== 200) {
+        if (resp.status !== 200) {
             console.log("Submit failed, status code: " + resp.status)
             return -1
         }
         const subId = getSubmissionId(await resp.text())
-        if(subId === -1) console.log("Submit failed, submission id not found")
+        if (subId === -1) console.log("Submit failed, submission id not found")
         return subId
     }
 
-    async submitStatus(subId: number): Promise<{result: string, result_name: string, time: string, memory: string} | null> {
-        const resp = await postResponse(`${config.SUBMITSTAT}`, `solution_id=${subId}`, this.getCookies(), {"x-requested-with": "XMLHttpRequest"})
-        if(resp.status !== 200) {
+    async submitStatus(subId: number): Promise<{ result: string, result_name: string, time: string, memory: string } | null> {
+        const resp = await postResponse(`${config.SUBMITSTAT}`, `solution_id=${subId}`, this.getCookies(), { "x-requested-with": "XMLHttpRequest" })
+        if (resp.status !== 200) {
             console.log(`Submit status failed, status code: ${resp.status}, subId: ${subId}`)
             return null
         }
-        const json = await resp.text()  
+        const json = await resp.text()
         const obj = JSON.parse(json)
-        if(obj.error) {
+        if (obj.error) {
             console.log(`Submit status failed, error: Internal server error, subId: ${subId}`)
             return null
         }
-        return {...obj}
+        return { ...obj }
     }
 
     async getUsername(): Promise<string> {
-        if(this.#username) return new Promise(resolve => resolve(this.#username))
+        if (this.#username) return new Promise(resolve => resolve(this.#username))
         let [c, resp] = await this.login()
         if (c !== 200) throw User.ERR_INVALID
         const $ = cheerio.load(await resp!.text())
@@ -117,18 +117,18 @@ export class User {
         return uname
     }
 
-    
+
     async loadProperties(): Promise<void> {
         const token = await loadFromLocal('token')
         const autologin = await loadFromLocal('autologin')
         const qnum = await loadFromLocal('qnum')
         const curlang = await loadFromLocal('lang')
-        if(token !== undefined) await this.setToken(token)
-        if(autologin !== undefined) await this.setAutologin(autologin)
-        if(qnum !== undefined) this.#qnum = qnum
-        if(curlang !== undefined) this.#lang = curlang
+        if (token !== undefined) await this.setToken(token)
+        if (autologin !== undefined) await this.setAutologin(autologin)
+        if (qnum !== undefined) this.#qnum = qnum
+        if (curlang !== undefined) this.#lang = curlang
     }
-        
+
 
 
 }

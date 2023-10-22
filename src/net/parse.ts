@@ -1,7 +1,7 @@
 import config from '@/config'
 import { get } from './fetch'
 import * as cheerio from 'cheerio';
-import { loadFromLocal, loadFromLocalWithPath, saveToLocal, saveToLocalWithPath } from '@/storage/localstorage';
+import { loadFromLocalWithPath, saveToLocalWithPath } from '@/storage/localstorage';
 
 export interface problem {
     qnum: number,
@@ -196,16 +196,16 @@ export async function getCSRFToken(cookie: string, qnum: number): Promise<string
     if (sts === 200) {
         const $ = cheerio.load(html)
         const csrf = $('input[name=csrf_key]').val()?.toString()
-        if(csrf) return csrf
+        if (csrf) return csrf
     }
     return null
 }
 
-export function getSubmissionId(html: string): number{
+export function getSubmissionId(html: string): number {
     const $ = cheerio.load(html)
     const m = $("tbody > tr:nth-child(1) > td:nth-child(1)").text()
     const val = parseInt(m)
-    if(!isNaN(val)) return val
+    if (!isNaN(val)) return val
     return -1
 }
 // (async () => {

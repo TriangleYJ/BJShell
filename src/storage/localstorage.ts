@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import {existsSync} from 'fs'
+import { existsSync } from 'fs'
 import conf from '@/config'
 
 export async function saveToLocal(name: string, value: any) {
@@ -16,7 +16,7 @@ export async function saveToLocalWithPath(path: string, name: string, value: any
     } catch (e) {
         if (e instanceof Error) {
             if (e.message.includes('ENOENT')) {
-                if (!existsSync(conf.ROOTPATH)){
+                if (!existsSync(conf.ROOTPATH)) {
                     await fs.mkdir(conf.ROOTPATH);
                 }
                 await fs.writeFile(configPath, JSON.stringify(config))
@@ -38,7 +38,7 @@ export async function loadFromLocalWithPath(path: string, name: string) {
         return config[name]
     } catch (e) {
         if (e instanceof Error) {
-            if(e.message.includes('ENOENT')) return
+            if (e.message.includes('ENOENT')) return
             console.log(e.message)
         }
         else console.log(e)

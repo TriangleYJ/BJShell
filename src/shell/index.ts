@@ -2,7 +2,7 @@ import readline from 'readline'
 import chalk from 'chalk'
 import os from 'os'
 import { User } from '@/net/user'
-import {  ChildProcessWithoutNullStreams } from 'child_process'
+import { ChildProcessWithoutNullStreams } from 'child_process'
 import kill from 'tree-kill'
 import { getLanguage, getLanguages, language } from '@/net/parse'
 import acquireAllCommands from './command'
@@ -28,7 +28,7 @@ export class BJShell {
     setLoginLock(lock: LoginLock) {
         this.#loginLock = lock
     }
-    
+
     async setPrompt(cmd?: string) {
         if (this.#loginLock === 0) this.r.setPrompt('Enter login token: ')
         else if (this.#loginLock === 1) this.r.setPrompt('(Optional) Enter autologin token: ')
@@ -90,7 +90,7 @@ export class BJShell {
             const commAlias = Object.values(commands).find(x => x.alias === cmd)
             if (commAlias) await commAlias.func()
             else if (commands[cmd]) await commands[cmd].func()
-            else if (cmd !== "") console.log("Unknown Command") 
+            else if (cmd !== "") console.log("Unknown Command")
 
             await this.setPrompt()
             this.#prevCommand = line
@@ -127,7 +127,7 @@ export class BJShell {
 
         // Load config
         await this.user.loadProperties()
-        if(await this.#loginGuard()) await getLanguages()
+        if (await this.#loginGuard()) await getLanguages()
         await this.setPrompt()
     }
 }
