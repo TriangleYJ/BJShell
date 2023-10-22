@@ -6,6 +6,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process'
 import kill from 'tree-kill'
 import { getLanguage, getLanguages, language } from '@/net/parse'
 import acquireAllCommands from './command'
+import { Monitor } from 'watch'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -19,6 +20,7 @@ export class BJShell {
     cp: ChildProcessWithoutNullStreams | null = null
     #loginLock: LoginLock = 2
     #prevCommand = ""
+    monitor: Monitor | null = null
     firstshow = true
 
     findLang(num?: number): language | undefined {
@@ -32,6 +34,7 @@ export class BJShell {
     async setPrompt(cmd?: string) {
         if (this.#loginLock === 0) this.r.setPrompt('Enter login token: ')
         else if (this.#loginLock === 1) this.r.setPrompt('(Optional) Enter autologin token: ')
+        else if (this.monitor) this.r.setPrompt('') // monitor block stdin, so no prompt (cp's blank prompt set in exec command)
         else {
             const rawdir = chalk.green(process.cwd());
             const dir = rawdir.replace(os.homedir(), "~")
@@ -78,7 +81,15 @@ export class BJShell {
                 this.cp.stdin.write(line + '\n');
                 return
             }
-            if (await this.#loginGuardOnLine(line)) return // prior handling 2: login guard
+            if (this.monitor) { // prior handling 2: monitor
+                if (line === 'exit') {
+                    this.monitor.stop()
+                    this.monitor = null
+                    await this.setPrompt()
+                }
+                return
+            }
+            if (await this.#loginGuardOnLine(line)) return // prior handling 3: login guard
 
             line = line.trim()
             if (line === '.') line = this.#prevCommand
@@ -103,7 +114,12 @@ export class BJShell {
 
         // Handle Ctrl+C (SIGINT) to send it to the child process
         this.r.on('SIGINT', async () => {
-            if (this.cp === null) {
+            if (this.monitor) {
+                this.monitor.stop()
+                this.monitor = null
+                await this.setPrompt()
+            }
+            else if (this.cp === null) {
                 console.log()
                 // FIXME: clear input buffer
                 await this.setPrompt()

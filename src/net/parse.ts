@@ -151,7 +151,7 @@ export async function parseTestCasesFromLocal(path: string) {
         else if (flag === 2) input += line.slice(srtpos) + '\n'
         else if (flag === 3) output += line.slice(srtpos) + '\n'
     }
-    if(testcases.length > 0) console.log(`${testcases.length} testcases found in local`)
+    // if(testcases.length > 0) console.log(`${testcases.length} testcases found in local`)
     return testcases
 }
 

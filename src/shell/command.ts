@@ -1,11 +1,13 @@
 import { BJShell } from "."
 import fs from "fs/promises"
+import { existsSync } from "fs"
 import chalk from "chalk"
 import conf from '@/config'
 import { spawn, exec, spawnSync } from 'child_process'
 import { getLanguages, getProblem, language, parseTestCasesFromLocal, problem, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
+import watch from 'watch'
 
 interface Command {
     desc: string
@@ -69,7 +71,6 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
         await that.user.setQnum(val)
         console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
 
-        // TODO: Add Comment to answer sheet
         let cmark = lang.commentmark ?? ""
         if (!cmark) {
             const result = await new Promise((resolveFunc) => {
@@ -164,13 +165,12 @@ ${cmark}
         return [question, lang]
     }
 
-    async function test() {
+    async function test(hideTitle?: boolean) {
         const info = await _checkInfo()
         if (!info) return
         const [question, lang] = info
-        console.log(`===== Testcase: ${question.qnum}. ${question.title} =====`)
+        if(!hideTitle) console.log(`===== Test: ${question.qnum}. ${question.title} =====`)
         let success: number = 0
-        // TODO: custom testcases
         const extension = lang.extension ?? ""
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
         if (!await writeMainTmp(filepath, extension)) return
@@ -191,7 +191,7 @@ ${cmark}
                 return
             }
         }
-        
+
         const localtestcases = await parseTestCasesFromLocal(filepath)
         const testcases = [...question.testcases, ...localtestcases]
         for (const i in testcases) {
@@ -226,6 +226,39 @@ ${cmark}
         }
         if (success === testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
         else console.log(chalk.yellow(`${success} / ${testcases.length} testcase passed`));
+    }
+
+    async function testWatch() {
+        const info = await _checkInfo()
+        if (!info) return
+        const [question, lang] = info
+        console.log(`===== Test: ${question.qnum}. ${question.title} =====`)
+        const extension = lang.extension ?? ""
+        const filepath = `${process.cwd()}/${question.qnum}${extension}`
+
+        if (!existsSync(filepath)) {
+            console.log("File not exists!")
+            return
+        }
+
+        await new Promise((resolveFunc) => {
+            watch.createMonitor(process.cwd(), { interval: 1 }, function (monitor) {
+                monitor.files[filepath] // Stat object for my zshrc.
+                that.monitor = monitor
+                monitor.on("changed", async function (f) {
+                    console.log()
+                    console.log(chalk.yellow(`File ${f.split("/").pop()} changed. retesting...`))
+                    await test(true)
+                    // Handle file changes
+                })
+                resolveFunc(0)
+            })
+        })
+        
+        await test(true)
+        console.log()
+        console.log(chalk.yellow("Watching file change..."))
+        console.log(chalk.yellow("If you want to stop watching, press Ctrl+C or type exit"))
     }
 
     async function lang() {
@@ -346,7 +379,7 @@ Usage: set <question number> or set`,
         "show": {
             desc: "Show problem.md file in VSCode",
             func: show,
-            alias: "w"
+            alias: "o"
         },
         "unset": {
             desc: "Unset question number",
@@ -362,6 +395,11 @@ Usage: exec <command>`,
             desc: `Test your code with parsed input(s) and output(s) You can set input(s) and output(s) in problem.md file.  Also, You can add more testcases in your answer code.`,
             func: test,
             alias: "t",
+        },
+        "testwatch": {
+            desc: `Same as test command, but watch file change and retest.`,
+            func: testWatch,
+            alias: "w",
         },
         "lang": {
             desc: `Show available languages or set language.
