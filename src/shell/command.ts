@@ -7,7 +7,8 @@ import { spawn, exec, spawnSync } from 'child_process'
 import { getLanguages, getProblem, language, parseTestCasesFromLocal, problem, setLanguageCommentMark } from '@/net/parse'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
-import watch from 'watch'
+import chokidar from 'chokidar'
+import readline from 'readline'
 
 interface Command {
     desc: string
@@ -169,7 +170,7 @@ ${cmark}
         const info = await _checkInfo()
         if (!info) return
         const [question, lang] = info
-        if(!hideTitle) console.log(`===== Test: ${question.qnum}. ${question.title} =====`)
+        if (!hideTitle) console.log(`===== Test: ${question.qnum}. ${question.title} =====`)
         let success: number = 0
         const extension = lang.extension ?? ""
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
@@ -242,19 +243,28 @@ ${cmark}
         }
 
         await new Promise((resolveFunc) => {
-            watch.createMonitor(process.cwd(), { interval: 1 }, function (monitor) {
-                monitor.files[filepath] // Stat object for my zshrc.
-                that.monitor = monitor
-                monitor.on("changed", async function (f) {
+            console.log(filepath)
+            const monitor = chokidar.watch(filepath, { persistent: true })
+            that.monitor = monitor
+            monitor.on("change", async function (f) {
+                if (f.includes(`${question.qnum}${extension}`)) {
                     console.log()
                     console.log(chalk.yellow(`File ${f.split("/").pop()} changed. retesting...`))
                     await test(true)
-                    // Handle file changes
-                })
-                resolveFunc(0)
+                }
             })
+            resolveFunc(0)
         })
-        
+
+        that.changelineModeToKeypress(async (key, data) => {
+            if (data.name === 'x') {
+                await that.revertlineModeFromKeypress()
+            } else if (data.name === 'b') {
+                console.log()
+                await submit()
+            }
+        })
+
         await test(true)
         console.log()
         console.log(chalk.yellow("Watching file change..."))

@@ -6,7 +6,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process'
 import kill from 'tree-kill'
 import { getLanguage, getLanguages, language } from '@/net/parse'
 import acquireAllCommands from './command'
-import { Monitor } from 'watch'
+import { FSWatcher } from 'chokidar'
 
 //type LoginLock = NOT_LOGGED_IN | AUTO_LOGIN_TOKEN | LOGGED_IN 
 type LoginLock = 0 | 1 | 2
@@ -17,10 +17,12 @@ export class BJShell {
         output: process.stdout,
     })
     user = new User("")
-    cp: ChildProcessWithoutNullStreams | null = null
     #loginLock: LoginLock = 2
     #prevCommand = ""
-    monitor: Monitor | null = null
+    cp: ChildProcessWithoutNullStreams | null = null
+    monitor: FSWatcher | null = null
+    keyeventListener: ((key: string, data: any) => Promise<void>) | null = null
+
     firstshow = true
 
     findLang(num?: number): language | undefined {
@@ -74,40 +76,53 @@ export class BJShell {
         return true
     }
 
+    lineListener = async (line: string) => {
+        if (this.cp) { // prior handling 1: child process stdin
+            this.cp.stdin.write(line + '\n');
+            return
+        }
+        if (await this.#loginGuardOnLine(line)) return // prior handling 3: login guard
+
+        line = line.trim()
+        if (line === '.') line = this.#prevCommand
+
+        const argv = line.split(' ')
+        let cmd = argv[0]
+        const arg = argv.slice(1)
+        const commands = acquireAllCommands(this, cmd, arg)
+        const commAlias = Object.values(commands).find(x => x.alias === cmd)
+        if (commAlias) await commAlias.func()
+        else if (commands[cmd]) await commands[cmd].func()
+        else if (cmd !== "") console.log("Unknown Command")
+
+        await this.setPrompt()
+        this.#prevCommand = line
+        return
+    }
+
+    async changelineModeToKeypress(keypressListener: (key: string, data: any) => Promise<void>) {
+        this.r.removeListener('line', this.lineListener)
+        readline.emitKeypressEvents(process.stdin);
+        process.stdin.setRawMode(true)
+
+        this.keyeventListener = keypressListener
+        process.stdin.on('keypress', keypressListener) 
+    }
+
+    async revertlineModeFromKeypress() {
+        this.monitor?.close()
+        this.monitor = null
+        if (this.keyeventListener) {
+            process.stdin.removeListener('keypress', this.keyeventListener)
+            this.keyeventListener = null
+        } 
+        this.r.write(null, { ctrl: true, name: 'u' });
+        await this.setPrompt()
+        this.r.on('line', this.lineListener)
+    }
 
     #initOn() {
-        this.r.on('line', async line => {
-            if (this.cp) { // prior handling 1: child process stdin
-                this.cp.stdin.write(line + '\n');
-                return
-            }
-            if (this.monitor) { // prior handling 2: monitor
-                if (line === 'exit') {
-                    this.monitor.stop()
-                    this.monitor = null
-                    await this.setPrompt()
-                }
-                return
-            }
-            if (await this.#loginGuardOnLine(line)) return // prior handling 3: login guard
-
-            line = line.trim()
-            if (line === '.') line = this.#prevCommand
-
-            const argv = line.split(' ')
-            let cmd = argv[0]
-            const arg = argv.slice(1)
-            const commands = acquireAllCommands(this, cmd, arg)
-            const commAlias = Object.values(commands).find(x => x.alias === cmd)
-            if (commAlias) await commAlias.func()
-            else if (commands[cmd]) await commands[cmd].func()
-            else if (cmd !== "") console.log("Unknown Command")
-
-            await this.setPrompt()
-            this.#prevCommand = line
-            return
-        })
-
+        this.r.on('line', this.lineListener)
         this.r.on('close', function () {
             process.exit()
         })
@@ -115,13 +130,11 @@ export class BJShell {
         // Handle Ctrl+C (SIGINT) to send it to the child process
         this.r.on('SIGINT', async () => {
             if (this.monitor) {
-                this.monitor.stop()
-                this.monitor = null
-                await this.setPrompt()
+                await this.revertlineModeFromKeypress()
             }
             else if (this.cp === null) {
                 console.log()
-                // FIXME: clear input buffer
+                this.r.write(null, { ctrl: true, name: 'u' });
                 await this.setPrompt()
             }
             else kill(this.cp.pid ?? 0, 'SIGINT', (err: any) => {
