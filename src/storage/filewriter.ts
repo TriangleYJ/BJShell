@@ -63,7 +63,7 @@ export async function writeFile(path: string, content: string, force?: boolean) 
 
 export async function writeMainTmp(src: string, ext: string) {
     // copy file in src and overwrite to ~/.bjshell/Main.${extension}
-    const path = `${conf.ROOTPATH}/Main${ext}`
+    const path = `${conf.TESTPATH}/Main${ext}`
     try {
         await fs.copyFile(src, path)
     } catch (e) {

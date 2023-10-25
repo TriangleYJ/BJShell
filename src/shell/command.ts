@@ -184,7 +184,7 @@ ${cmark}
         // })
         if (lang.compile && !lang.run.includes('Main' + extension)) {
             const result = spawnSync(lang.compile.split(" ")[0], [...lang.compile.split(" ").slice(1)], {
-                cwd: conf.ROOTPATH
+                cwd: conf.TESTPATH
             })
             if (result.status !== 0) {
                 console.log(`${lang.compile}: ${chalk.red("Compile Error!")}`)
@@ -205,7 +205,7 @@ ${cmark}
             // FIXME: javascript error - using /dev/stdin returns ENXIO: no such device or address, open '/dev/stdin'
             const result = spawnSync(lang.run.split(" ")[0], [...lang.run.split(" ").slice(1)], {
                 input: t.input,
-                cwd: conf.ROOTPATH,
+                cwd: conf.TESTPATH,
                 timeout: timelimit * 1000
             })
             if (result.signal === "SIGTERM") console.log(chalk.red(`${prefix}${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
@@ -406,8 +406,11 @@ Usage: exec <command>`,
             func: test,
             alias: "t",
         },
-        "testwatch": {
-            desc: `Same as test command, but watch file change and retest.`,
+        "watch": {
+            desc: `Same as test command, but watch file change and retest. 
+In watch mode, you can use "b" and "x" command.
+b: submit immediately
+x: close watch mode (same as Ctrl + C)`,
             func: testWatch,
             alias: "w",
         },
