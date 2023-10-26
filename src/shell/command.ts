@@ -9,7 +9,6 @@ import { parseTestCasesFromLocal, readTemplateFromLocal } from '@/storage/filere
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
 import chokidar from 'chokidar'
-import readline from 'readline'
 
 interface Command {
     desc: string
@@ -49,7 +48,7 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
         await that.user.setToken("")
         await that.user.setAutologin("")
         that.setLoginLock(0)
-        console.log("Logged out")
+        console.log("로그아웃 되었습니다.")
     }
 
     async function set() {
@@ -62,22 +61,22 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
         }
         const lang = that.findLang()
         if (!lang) {
-            console.log("Set language first")
+            console.log("lang 명령어를 통해 먼저 언어를 선택해 주세요.")
             return
         }
         const question = await getProblem(val, that.user.getCookies())
         if (question === null) {
-            console.log("Invaild question number")
+            console.log("유효하지 않은 문제 번호입니다!")
             return
         }
         // ASSERT val is valid qnum
         await that.user.setQnum(val)
-        console.log(`Set question to ${chalk.yellow(arg[0] + ". " + question.title)}`)
+        console.log(`문제가 ${chalk.yellow(arg[0] + ". " + question.title)}로 설정되었습니다.`)
 
         let cmark = lang.commentmark ?? ""
         if (!cmark) {
             const result = await new Promise((resolveFunc) => {
-                that.r.question("We don't know comment mark of the language. Enter the comment mark. If blank, information header will not be generated.\n", (answer) => {
+                that.r.question("현재 언어의 주석 문자를 모르겠습니다. 주석 문자를 입력해 주세요. 만약 입력을 안할경우, 문제 정보 헤더가 생성되지 않습니다. \n", (answer) => {
                     resolveFunc(answer)
                 })
             })
@@ -104,8 +103,8 @@ ${cmark}
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
         const langTemplate = (await readTemplateFromLocal(extension)) ?? ""
 
-        if (await writeFile(filepath, commentHeader + langTemplate)) console.log(`Create new file to ${chalk.green(filepath)}`)
-        else console.log("File exists! skip creating new file...")
+        if (await writeFile(filepath, commentHeader + langTemplate)) console.log(`${chalk.green(filepath)}에 새로운 답안 파일을 생성했습니다.`)
+        else console.log("파일이 존재합니다! 이전 파일을 불러옵니다.")
         exec(`code ${filepath}`)
     }
 
@@ -113,18 +112,18 @@ ${cmark}
         exec(`code ${conf.MDPATH}`)
         if (that.firstshow) {
             that.firstshow = false
-            console.log("MD file opened in VSCode")
-            console.log("※  If your file is not changed, press ... and click 'Refresh Preview'")
-            console.log("※  If you see the raw code, not preview, follow below in VSCode.")
-            console.log(`
-1. Press "Ctrl+Shift+P"
-2. Click "Preferences: Open User Settings (JSON)"
-3. Add these lines to json file before the last }
+                console.log("VSCode에 문제 파일을 열었습니다.")
+                console.log("※ 만약 문제 MD 파일이 바뀌지 않는다면, ... 버튼을 클릭 후 'Refresh Preview' 버튼을 클릭해 주세요." )
+                console.log("※ 만약 미리보기가 아닌 코드가 보인다면 VSCode 상에서 다음 설정을 진행해 주세요.")
+                console.log(`
+1. "Ctrl+Shift+P" 를 누르세요
+2. "Preferences: Open User Settings (JSON) 를 클릭하세요."
+3. json 파일의 마지막 } 이전에 다음 코드를 복사해서 붙여넣으세요.
     , // don't forget the comma
     "workbench.editorAssociations": {   
         "*.md": "vscode.markdown.preview.editor",
     }
-            `)
+`)
         }
     }
 
@@ -157,12 +156,12 @@ ${cmark}
     async function _checkInfo(): Promise<[problem, language] | null> {
         const question = await getProblem(that.user.getQnum())
         if (question === null) {
-            console.log("Invaild question number")
+            console.log("유효하지 않은 문제 번호입니다!")
             return null
         }
         const lang = that.findLang()
         if (lang === undefined) {
-            console.log("Set language first")
+            console.log("lang 명령어를 통해 먼저 언어를 선택해 주세요.")
             return null
         }
         return [question, lang]
@@ -172,7 +171,7 @@ ${cmark}
         const info = await _checkInfo()
         if (!info) return
         const [question, lang] = info
-        if (!hideTitle) console.log(`===== Test: ${question.qnum}. ${question.title} =====`)
+        if (!hideTitle) console.log(`===== 테스트: ${question.qnum}. ${question.title} =====`)
         let success: number = 0
         const extension = lang.extension ?? ""
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
@@ -189,7 +188,7 @@ ${cmark}
                 cwd: conf.TESTPATH
             })
             if (result.status !== 0) {
-                console.log(`${lang.compile}: ${chalk.red("Compile Error!")}`)
+                console.log(`${lang.compile}: ${chalk.red("컴파일 에러!")}`)
                 console.log(result.stderr?.toString())
                 return
             }
@@ -198,7 +197,7 @@ ${cmark}
         const localtestcases = await parseTestCasesFromLocal(filepath)
         const testcases = [...question.testcases, ...localtestcases]
         for (const i in testcases) {
-            const prefix = parseInt(i) >= question.testcases.length ? "(local) Test #" : "Test #"
+            const prefix = parseInt(i) >= question.testcases.length ? "(커스텀) 테스트 #" : "테스트 #"
             const t = testcases[i]
             const expected = t.output.replace(/\r\n/g, '\n')
             // default timelimit: stat.timelimit * 2
@@ -210,25 +209,25 @@ ${cmark}
                 cwd: conf.TESTPATH,
                 timeout: timelimit * 1000
             })
-            if (result.signal === "SIGTERM") console.log(chalk.red(`${prefix}${i} : Timeout! ⏰ ( > ${timelimit} sec )`))
+            if (result.signal === "SIGTERM") console.log(chalk.red(`${prefix}${i} : 시간 초과! ⏰ ( > ${timelimit} sec )`))
             else if (result.status !== 0) {
-                console.log(chalk.red(`${prefix}${i} : Error! ⚠`))
+                console.log(chalk.red(`${prefix}${i} : 에러! ⚠`))
                 console.log(result.stderr?.toString())
             } else {
                 const actual = String(result.stdout).replace(/\r\n/g, '\n')
                 if (actual.trim() == expected.trim()) {
-                    console.log(chalk.green(`${prefix}${i} : Passed! ✅`))
+                    console.log(chalk.green(`${prefix}${i} : 통과! ✅`))
                     success += 1
                 }
                 else {
-                    console.log(chalk.red(`${prefix}${i} : Failed! ❌`))
-                    console.log(`Expected: ${expected.trim()}`);
-                    console.log(`Actual: ${actual.trim()}`);
+                    console.log(chalk.red(`${prefix}${i} : 실패! ❌`))
+                    console.log(`예상 정답: ${expected.trim()}`);
+                    console.log(`실행 결과: ${actual.trim()}`);
                 }
             }
         }
-        if (success === testcases.length) console.log(chalk.green("All testcase passed! 🎉"))
-        else console.log(chalk.yellow(`${success} / ${testcases.length} testcase passed`));
+        if (success === testcases.length) console.log(chalk.green("모든 테스트를 통과했습니다! 🎉"))
+        else console.log(chalk.yellow(`${success} / ${testcases.length} 개의 테스트를 통과했습니다.`));
     }
 
     async function testWatch() {
@@ -240,7 +239,7 @@ ${cmark}
         const filepath = `${process.cwd()}/${question.qnum}${extension}`
 
         if (!existsSync(filepath)) {
-            console.log("File not exists!")
+            console.log("파일이 존재하지 않습니다!")
             return
         }
 
@@ -251,7 +250,7 @@ ${cmark}
             monitor.on("change", async function (f) {
                 if (f.includes(`${question.qnum}${extension}`)) {
                     console.log()
-                    console.log(chalk.yellow(`File ${f.split("/").pop()} changed. retesting...`))
+                    console.log(chalk.yellow(`파일 ${f.split("/").pop()} 가 변동되었습니다. 다시 테스트 합니다...`))
                     await test(true)
                 }
             })
@@ -269,8 +268,8 @@ ${cmark}
 
         await test(true)
         console.log()
-        console.log(chalk.yellow("Watching file change..."))
-        console.log(chalk.yellow("If you want to stop watching, press Ctrl+C or type exit"))
+        console.log(chalk.yellow("파일이 변동될 때까지 감시합니다..."))
+        console.log(chalk.yellow("만약 감시를 중단하고 싶다면, Ctrl+C를 누르거나 x를 입력하십시오."))
     }
 
     async function lang() {
@@ -289,16 +288,16 @@ ${cmark}
                 data.push(row)
             }
             console.log(table(data, { drawVerticalLine: i => i % 3 === 0 }))
-            console.log(`To set language, type ${chalk.blueBright("lang <language number>")}`)
-            console.log(`Before set language, check your language extension is valid. If not, modify \`compile\` and \`run\` in ${chalk.blueBright(conf.LANGPATH)}`)
+            console.log(`원하는 언어를 사용하기 위해서 ${chalk.blueBright("lang <language number>")}를 타이핑하세요.`)
+            console.log(`언어를 사용하기 전에, 자동으로 불러온 언어 설정이 유효한지 확인하세요. 그렇지 않으면, ${chalk.blueBright(conf.LANGPATH)} 파일의 \`compile\` 과 \`run\` 명령어를 수동으로 바꿔주셔야 합니다.`)
             return
         }
         if (arg.length !== 1 || isNaN(parseInt(arg[0]))) {
             console.log("lang <language number>")
-            console.log("To see language list, type lang list")
+            console.log("언어 목록을 보고 싶다면 lang list를 타이핑하세요.")
             return
         } else if (!that.findLang(parseInt(arg[0]))) {
-            console.log("Invaild language number")
+            console.log("유효하지 않은 언어 번호입니다.")
             return
         }
         await that.user.setLang(parseInt(arg[0]))
@@ -310,7 +309,7 @@ ${cmark}
         const [question, _] = info
         that.r.pause()
         try {
-            console.log(`===== Submission: ${question!.qnum}. ${question!.title} =====`)
+            console.log(`===== 제출: ${question!.qnum}. ${question!.title} =====`)
             const filepath = `${process.cwd()}/${that.user.getQnum()}${that.findLang()?.extension ?? ""}`
             const code = await fs.readFile(filepath, 'utf-8')
             const subId = await that.user.submit(code)
@@ -319,12 +318,12 @@ ${cmark}
             for (let sec = 0; sec < 60; sec++) {
                 const result = await that.user.submitStatus(subId)
                 if (result === null) {
-                    console.log(`Failed to get result of submission ${subId}`)
+                    console.log(`제출번호 ${subId} 결과를 가져오는데 실패했습니다.`)
                     return
                 }
                 const result_num = parseInt(result.result)
                 if (isNaN(result_num)) {
-                    console.log(`Failed to parse result of submission ${subId}`)
+                    console.log(`제출번호 ${subId} 결과를 파싱하는데 실패했습니다.`)
                     return
                 }
                 process.stdout.clearLine(0);
@@ -350,7 +349,7 @@ ${cmark}
     function help(commands: { [key: string]: Command }) {
         if (arg[0] == 'all') {
             const data = []
-            data.push(["Alias", "Command", "Description"])
+            data.push(["단축어", "명령어", "설명"])
             for (const key in commands) {
                 const cmd = commands[key]
                 data.push([cmd.alias ?? "", key, cmd.desc])
@@ -366,6 +365,7 @@ ${cmark}
     << 와 -- 사이에 있는 문자(개행문자 포함)는 입력으로, >> 와 -- 는 출력 결과로 인식됩니다.
     << 혹은 -- 다음에 오는 문자는 <<, -- 와 반드시 들여쓰기 공백 (탭) 개수를 일치시켜야 합니다.
     << (input) -- (output) >> 가 하나의 테스트케이스이며, 태그에 여러개의 테스트케이스를 추가할 수 있습니다.
+커스텀 테스트케이스 실행 결과에 (커스텀) 이라는 접두어가 붙습니다.
 
 ${chalk.green(`예시) 1000.py
 
@@ -393,14 +393,14 @@ print(a + b)
             )
         } else if (arg.length === 0) {
             const data = []
-            data.push(["Alias", "Command", "Description"])
+            data.push(["단축어", "명령어", "설명"])
             for (const key in commands) {
                 const cmd = commands[key]
                 if(cmd.important) data.push([cmd.alias ?? "", key, cmd.desc])
             }
             console.log(table(data))
-            console.log("Type 'help all' to show all commands")
-            console.log("Type 'help testcase' to show BJTestcase syntax")
+            console.log("모든 명령어를 보려면 'help all' 를 타이핑하세요.")
+            console.log("커스텀 테스트케이스 문법을 보려면 'help testcase' 를 타이핑하세요.")
         }
         
     }
@@ -408,90 +408,91 @@ print(a + b)
 
     const commands = {
         "help": {
-            desc: "Show help.",
+            // desc: "Show help.",
+            desc: "명령어를 보여줍니다. 전체 명령어를 보려면 'help all' 을 타이핑하세요.",
             func: () => help(commands),
             alias: "h",
             important: true
         },
         "exit": {
-            desc: "Exit BJ Shell",
+            desc: "BJ Shell을 종료합니다.",
             func: () => { that.r.close() },
             alias: "x"
         },
         "pwd": {
-            desc: "Print working directory",
+            desc: "현재 디렉토리를 보여줍니다.",
             func: () => { console.log(process.cwd()) }
         },
         "ls": {
-            desc: "List files in current directory",
+            desc: "현재 디렉토리의 파일 목록을 보여줍니다.",
             func: ls
         },
         "cd": {
-            desc: "Change directory",
+            desc: "디렉토리를 이동합니다. (cd <path>)",
             func: cd
         },
         "logout": {
-            desc: "Logout from BJ",
+            desc: "BJ Shell을 로그아웃합니다.",
             func: logout
         },
         "set": {
-            desc: `Set question number and create or open answer file in VSCode.
-Also, Update .bjshell/problem.md file. If no argument is given, set current question number.
-If there is template file in .bjshell/Template/Main.*, it loads template when creating file.
-Usage: set <question number> or set`,
+            desc: `VSCode에서 문제 번호를 설정하고 답안 파일을 새로 만들거나 엽니다.
+또한 문제 파일을 업데이트합니다. 인수가 없으면 현재 문제 번호를 설정합니다.
+.bjshell/Template/Main.*에 템플릿 파일이 있으면 파일을 만들 때 템플릿을 로드합니다.
+사용법: set <question number> or set`,
             func: set,
             alias: "s",
             important: true
         },
         "show": {
-            desc: "Show problem.md file in VSCode",
+            desc: "VSCode에서 문제 파일(problem.md)을 엽니다.",
             func: show,
             alias: "o",
             important: true
         },
         "unset": {
-            desc: "Unset question number",
+            desc: "현재 문제 번호를 초기화합니다.",
             func: async () => { await that.user.setQnum(0) }
         },
         "exec": {
-            desc: `Execute simple external process in sh. (ex. exec python3 Main.py / e rm *.py)
-Only SIGINT(Ctrl+C) is handled. Complex shell feature (pipe) is not supported.
-Usage: exec <command>`,
+            desc: `외부 프로세스를 실행합니다. (ex. exec python3 Main.py) (ex. e rm *.py)
+SIGINT(Ctrl+C)만 처리됩니다. 파이프 등 복잡한 쉘 기능은 지원하지 않습니다.
+사용법: exec <command>`,
             func: execInBJ,
             alias: "e"
         },
         "test": {
-            desc: `Test your code with parsed input(s) and output(s).
-You can set input(s) and output(s) in problem.md file.
-Also, You can add more testcases in your answer code. (See detail in "help bjtestcase")`,
+            desc: `문제에서 제공하는 테스트케이스를 사용하여 코드를 테스트합니다.
+테스트케이스는 문제 파일(problem.md)에 기록되어 있습니다.
+또한, 답안 파일에 커스텀 테스트케이스를 추가할 수 있습니다. (자세한 내용은 "help testcase" 를 참고하세요.)`,
             func: test,
             alias: "t",
         },
         "watch": {
-            desc: `Same as test command, but watch file change and retest. 
-In watch mode, you can use "b" and "x" command.
-b: submit immediately
-x: close watch mode (same as Ctrl + C)`,
+            desc: `test 명령어와 동일하지만, 파일 변동을 감지하여 자동으로 테스트를 재실행합니다.
+watch 모드에서는 "b" 와 "x" 명령어를 사용할 수 있습니다.
+b: 즉시 제출합니다. (submit 명령어와 동일)
+x: watch 모드를 종료합니다. (Ctrl + C 와 동일)`,
             func: testWatch,
             alias: "w",
             important: true
         },
         "lang": {
-            desc: `Show available languages or set language.
-Usage: lang list or lang list <column number>
-Usage: lang <language number>`,
+            desc: `사용 가능한 언어를 보여줍니다. 언어를 설정하려면 lang <언어 번호> 를 타이핑하세요.
+사용법: lang list or lang list <column number>
+사용법: lang <language number>`,
             func: lang,
             alias: "l",
             important: true
         },
         "submit": {
-            desc: `Submit your code to BOJ using set language and question number in BJ Shell.`,
+            desc: `현재 문제 번호와 언어를 사용하여 BOJ에 코드를 제출합니다.`,
             func: submit,
             alias: "b",
             important: true
         },
         "google": {
-            desc: `Search current problem in Google`,
+            desc: `현재 문제를 구글에서 검색합니다. (링크 제공)`,
             func: () => console.log(`https://www.google.com/search?q=%EB%B0%B1%EC%A4%80+${that.user.getQnum()}+${encodeURIComponent(that.findLang()?.name ?? "")}`),
             alias: "g",
         }

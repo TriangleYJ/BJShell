@@ -52,8 +52,8 @@ export class BJShell {
     async #loginGuard() {
         // Check curruent token exists or vaild
         if (await this.user.checkLogin() === 200) return true
-        console.log(`${chalk.red("Log in required")}`)
-        console.log(`If you don't know how to find your token, refer here: https://github.com/TriangleYJ/Beakjoon-VSC`)
+        console.log(`${chalk.red("로그인이 필요합니다.")}`)
+        console.log(`만약 토큰을 어떻게 찾는지 모르겠다면, 여기를 참고하세요: https://github.com/TriangleYJ/Beakjoon-VSC`)
         this.setLoginLock(0)
         return false
     }
@@ -63,12 +63,12 @@ export class BJShell {
         if (this.#loginLock === 0) {
             await this.user.setToken(line)
             if (await this.user.checkLogin() === 200) this.setLoginLock(1)
-            else console.log("Invaild token")
+            else console.log("유효하지 않은 로그인 토큰입니다.")
             await this.setPrompt()
         } else if (this.#loginLock === 1) {
             await this.user.setAutologin(line)
             this.#loginLock = 2
-            console.log(chalk.green("Login success"))
+            console.log(chalk.green("로그인 성공!"))
             console.log()
             await getLanguages(true)
             await this.setPrompt()
@@ -150,8 +150,8 @@ export class BJShell {
     async init() {
         this.#initOn()
 
-        console.log(`Welcome to ${chalk.yellow("BaekJoon Shell")}`)
-        console.log(`Type ${chalk.blue("help")} to get help`)
+        console.log(`${chalk.yellow("BaekJoon Shell")} 에 오신 것을 환영합니다!`)
+        console.log(`${chalk.blue("help")}를 입력하여 명령어를 확인하세요.`)
         console.log()
 
         // Load config

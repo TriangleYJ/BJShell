@@ -121,7 +121,7 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
     const [sts, html] = await get("", "", config.LANGURL)
     if (sts !== 200) {
         console.log(sts)
-        console.log("Failed to get language list from BOJ")
+        console.log("BOJ에서 언어목록을 불러오는데 실패했습니다.")
         return []
     }
     const $ = cheerio.load(html)
@@ -164,7 +164,7 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
         const ext_run = run.match(/Main\.[a-zA-Z0-9]+/g)
         //if(ext_compile && ext_run && (ext_compile[0] != ext_run[0])) console.log(`Warning: ${name} has different extension in compile and run (compile: ${ext_compile[0]}, run: ${ext_run[0]}))`)
         const extension = (ext_compile ? ext_compile[0] : ext_run ? ext_run[0] : '').replace('Main', '')
-        if (!extension) console.log(`Warning: ${name} has no extension`)
+        if (!extension) console.log(`주의: ${name} 언어는 확장자가 없습니다.`)
         const commentmark = LANG_COMMENTS_HARDCODED.find(x => x[0] === extension)?.[1] ?? ''
 
         arr.push({
@@ -172,8 +172,8 @@ export async function getLanguages(forceLoad?: boolean): Promise<language[]> {
         })
     }
     console.log()
-    console.log(`Loaded ${arr.length} languages from BOJ`)
-    console.log(`❗ Some languages' extension may be wrong or empty. Please check via "lang list" command.`)
+    console.log(`${arr.length} 개의 언어를 BOJ에서 불러왔습니다.`)
+    console.log(`❗ 몇몇 언어들의 확장자는 잘못되었거나 비어있습니다. "lang list" 명령어를 통해서 확인하세요.`)
 
     await saveToLocalWithPath(config.LANGPATH, 'langs', arr)
     langsCache.push(...arr)
