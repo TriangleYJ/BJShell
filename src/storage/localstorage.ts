@@ -19,7 +19,7 @@ export async function saveToLocalWithPath(path: string, name: string, value: any
                 if (!existsSync(conf.ROOTPATH)) {
                     await fs.mkdir(conf.ROOTPATH);
                     await fs.mkdir(conf.TESTPATH);
-                    await fs.mkdir(conf.LANGHEADERPATH);
+                    await fs.mkdir(conf.TEMPLATEPATH);
                 }
                 await fs.writeFile(configPath, JSON.stringify(config))
             } else console.log(e.message)
