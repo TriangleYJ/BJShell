@@ -20,7 +20,7 @@ export async function getUsername(): Promise<string> {
 } */
 
 export class User {
-    static ERR_INVALID = new Error("Invalid user token")
+    static ERR_INVALID = new Error("유효하지 않은 로그인 토큰입니다.")
     #token: string = ""
     #autologin: string = ""
     #username: string = ""
@@ -77,31 +77,31 @@ export class User {
     async submit(code: string): Promise<number> {
         const csrf = await getCSRFToken(this.getCookies(), this.#qnum)
         if (!csrf) {
-            console.log("Submit failed, csrf_token not found")
+            console.log("제출 실패, csrf_token not found")
             return -1
         }
         const resp = await postResponse(`${config.SUBMIT}${this.#qnum}`,
             `problem_id=${this.#qnum}&language=${this.#lang}&code_open=close&source=${encodeURIComponent(code)}&csrf_key=${csrf}`,
             this.getCookies())
         if (resp.status !== 200) {
-            console.log("Submit failed, status code: " + resp.status)
+            console.log("제출 실패, status code: " + resp.status)
             return -1
         }
         const subId = getSubmissionId(await resp.text())
-        if (subId === -1) console.log("Submit failed, submission id not found")
+        if (subId === -1) console.log("제출 실패, submission id not found")
         return subId
     }
 
     async submitStatus(subId: number): Promise<{ result: string, result_name: string, time: string, memory: string } | null> {
         const resp = await postResponse(`${config.SUBMITSTAT}`, `solution_id=${subId}`, this.getCookies(), { "x-requested-with": "XMLHttpRequest" })
         if (resp.status !== 200) {
-            console.log(`Submit status failed, status code: ${resp.status}, subId: ${subId}`)
+            console.log(`제출 결과 불러오기 실패, status code: ${resp.status}, subId: ${subId}`)
             return null
         }
         const json = await resp.text()
         const obj = JSON.parse(json)
         if (obj.error) {
-            console.log(`Submit status failed, error: Internal server error, subId: ${subId}`)
+            console.log(`제출 결과 불러오기 실패, error: Internal server error, subId: ${subId}`)
             return null
         }
         return { ...obj }

@@ -13,6 +13,8 @@ export default {
     CONFPATH: `${os.homedir()}/.bjshell/config.json`,
     LANGPATH: `${os.homedir()}/.bjshell/lang.json`,
     ROOTPATH: `${os.homedir()}/.bjshell`,
+    TEMPLATEPATH: `${os.homedir()}/.bjshell/Template`,
+    TESTPATH: `${os.homedir()}/.bjshell/.testspace`,
 
     // PROBLEM_MD: '.bjshell/problem.md',
     // CONFIG: '.bjshell/config.json',
