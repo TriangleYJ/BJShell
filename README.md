@@ -3,15 +3,15 @@
 
 ## 스크린샷
 ### 문제, 언어 설정
-![set_lang](https://github.com/TriangleYJ/BJShell/assets/9069813/8d4090a1-eb25-46f9-8acf-ffa39f61615f)
+![set_lang](./screenshot/set_lang.gif)
 
 ### 자동 테스트, 제출
-![watch_submit](https://github.com/TriangleYJ/BJShell/assets/9069813/ead5c6ec-ef40-4642-a5b1-b64ebe7c14bf)
+![watch_submit](./screenshot/watch_submit.gif)
 
 
 
 ## 설치
-https://github.com/TriangleYJ/Beakjoon-VSC/releases 에서 확인할 수 있습니다.
+https://github.com/TriangleYJ/BJShell/releases 에서 확인할 수 있습니다.
 
 ## 어떻게 쉘에 로그인 할 수 있나요?
 1. https://www.acmicpc.net/ 에 접속합니다.

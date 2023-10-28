@@ -53,7 +53,7 @@ export class BJShell {
         // Check curruent token exists or vaild
         if (await this.user.checkLogin() === 200) return true
         console.log(`${chalk.red("로그인이 필요합니다.")}`)
-        console.log(`만약 토큰을 어떻게 찾는지 모르겠다면, 여기를 참고하세요: https://github.com/TriangleYJ/Beakjoon-VSC`)
+        console.log(`만약 토큰을 어떻게 찾는지 모르겠다면, 여기를 참고하세요: https://github.com/TriangleYJ/BJShell`)
         this.setLoginLock(0)
         return false
     }

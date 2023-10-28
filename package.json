@@ -1,5 +1,5 @@
 {
-  "name": "beakjoon-vsc",
+  "name": "bjshell",
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TriangleYJ/Beakjoon-VSC.git"
+    "url": "git+https://github.com/TriangleYJ/BJShell.git"
   },
   "author": "triangleyj",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TriangleYJ/Beakjoon-VSC/issues"
+    "url": "https://github.com/TriangleYJ/BJShell/issues"
   },
-  "homepage": "https://github.com/TriangleYJ/Beakjoon-VSC#readme",
+  "homepage": "https://github.com/TriangleYJ/BJShell#readme",
   "devDependencies": {
     "@types/jest": "^29.5.5",
     "@types/node-fetch": "^2.6.6",
