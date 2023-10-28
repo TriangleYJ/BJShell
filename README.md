@@ -2,6 +2,13 @@
 백준 문제를 빠르게 읽고, 테스트하고, 제출할 수 있도록 도와주는 쉘 프로그램입니다.
 
 ## 스크린샷
+### 문제, 언어 설정
+![set_lang](https://github.com/TriangleYJ/BJShell/assets/9069813/8d4090a1-eb25-46f9-8acf-ffa39f61615f)
+
+### 자동 테스트, 제출
+![watch_submit](https://github.com/TriangleYJ/BJShell/assets/9069813/ead5c6ec-ef40-4642-a5b1-b64ebe7c14bf)
+
+
 
 ## 설치
 https://github.com/TriangleYJ/Beakjoon-VSC/releases 에서 확인할 수 있습니다.
