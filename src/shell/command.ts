@@ -4,11 +4,12 @@ import { existsSync } from "fs"
 import chalk from "chalk"
 import conf from '@/config'
 import { spawn, exec, spawnSync } from 'child_process'
-import { getLanguages, getProblem, language, problem, setLanguageCommentMark } from '@/net/parse'
+import { getLanguages, getProblem, getProblemSet, language, problem, setLanguageCommentMark } from '@/net/parse'
 import { parseTestCasesFromLocal, readTemplateFromLocal } from '@/storage/filereader'
 import { writeFile, writeMDFile, writeMainTmp } from '@/storage/filewriter'
 import { table } from 'table'
 import chokidar from 'chokidar'
+import { loadFromLocal, saveToLocal } from "@/storage/localstorage"
 
 interface Command {
     desc: string
@@ -51,13 +52,18 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
         console.log("로그아웃 되었습니다.")
     }
 
-    async function set() {
-        if (arg.length === 0 && that.user.getQnum() !== 0)
-            arg.push(String(that.user.getQnum()))
-        const val = parseInt(arg[0])
-        if (arg.length !== 1 || isNaN(val) || val < 0) {
-            console.log("set <question number>")
-            return
+    async function set(num?: number) {
+        let val = num
+        if(val === undefined) {
+            if (arg.length === 0 && that.user.getQnum() !== 0) val = that.user.getQnum()
+            else {
+                const tmp_val = parseInt(arg[0])
+                if (!isNaN(tmp_val) && tmp_val >= 0) val = tmp_val
+            }
+            if (!val) {
+                console.log("set <question number>")
+                return
+            }
         }
         const lang = that.findLang()
         if (!lang) {
@@ -71,7 +77,7 @@ export default function acquireAllCommands(that: BJShell, cmd: string, arg: stri
         }
         // ASSERT val is valid qnum
         await that.user.setQnum(val)
-        console.log(`문제가 ${chalk.yellow(arg[0] + ". " + question.title)}로 설정되었습니다.`)
+        console.log(`문제가 ${chalk.yellow(val + ". " + question.title)}로 설정되었습니다.`)
 
         let cmark = lang.commentmark ?? ""
         if (!cmark) {
@@ -333,6 +339,9 @@ ${cmark}
                         `${chalk.green(result.result_name)} | Time: ${result.time} ms | Memory: ${result.memory} KB` :
                         `${chalk.red(result.result_name)}`
                     console.log(info)
+                    const username = await that.user.getUsername()
+                    const langcode = that.findLang()?.num
+                    console.log(`\n=> ${conf.URL}status?problem_id=${question!.qnum}&user_id=${username}&language_id=${langcode}&result_id=-1`)
                     break
                 }
                 process.stdout.write(`${result.result_name} (${sec} s passed)`); // end the line
@@ -344,6 +353,124 @@ ${cmark}
         } finally {
             that.r.resume()
         }
+    }
+
+
+    async function probset() {
+        // if(arg[0] == )
+        switch(arg[0]) {
+            case 'set':
+            case 's': {
+                if(arg.length == 1) {
+                    console.log("probset set <number>")
+                    return
+                }
+                const probsObj = await loadFromLocal("ps")
+                if(!probsObj) {
+                    console.log("저장된 문제 셋이 없습니다.")
+                    return
+                }
+                const val = parseInt(arg[1])
+                if (isNaN(val) || val < 0 || val >= probsObj.probset.length) {
+                    console.log("probset set <number>")
+                    return
+                }
+                await set(probsObj.probset[val][0])
+                break
+            }
+            case 'clear':
+            case 'c': {
+                await saveToLocal("ps", undefined)
+                console.log("문제 셋을 초기화했습니다.")
+                break
+            }
+            case 'next':
+            case 'n': {
+                const probsObj = await loadFromLocal("ps")
+                if(!probsObj) {
+                    console.log("저장된 문제 셋이 없습니다.")
+                    return
+                }
+                const qnum = that.user.getQnum()
+                const idx = probsObj.probset.findIndex((x: [number, string]) => x[0] == qnum)
+                if(idx == -1) {
+                    console.log("현재 문제가 저장된 문제 셋에 없습니다.")
+                    return
+                }
+                if(idx == probsObj.probset.length - 1) {
+                    console.log("마지막 문제입니다.")
+                    return
+                }
+                await set(probsObj.probset[idx + 1][0])
+                break
+            }
+            case 'prev':
+            case 'p': {
+                const probsObj = await loadFromLocal("ps")
+                if(!probsObj) {
+                    console.log("저장된 문제 셋이 없습니다.")
+                    return
+                }
+                const qnum = that.user.getQnum()
+                const idx = probsObj.probset.findIndex((x: [number, string]) => x[0] == qnum)
+                if(idx == -1) {
+                    console.log("현재 문제가 저장된 문제 셋에 없습니다.")
+                    return
+                }
+                if(idx == 0) {
+                    console.log("첫번째 문제입니다.")
+                    return
+                }
+                await set(probsObj.probset[idx - 1][0])
+                break
+            }
+            case 'list':
+            case 'l': {
+                const probsObj = await loadFromLocal("ps")
+                if(!probsObj) {
+                    console.log("저장된 문제 셋이 없습니다.")
+                    return
+                }
+                const data = []
+                data.push(["번호", "제목"])
+                console.log(`${probsObj.title}: 문제 ${probsObj.probset.length}개`)
+                for(const prob of probsObj.probset) {
+                    const qnum = prob[0]
+                    const title = prob[1]
+                    if(qnum == that.user.getQnum()) {
+                        data.push([chalk.green(qnum), chalk.green(title)])
+                    } else {
+                        data.push([qnum, title])
+                    }
+                }
+                console.log(table(data))
+                break
+            }
+            default: {
+                const urlReg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+                if(!urlReg.test(arg[0])) {
+                    console.log("올바른 URL이 아닙니다.")
+                    return
+                }
+                const probset = await getProblemSet(arg[0])
+                if(probset.length == 0) {
+                    console.log("문제가 없습니다.")
+                    return
+                }
+                const probsetTitle = arg[1] ? arg.slice(1).join(' ') : 'My Problem Set'
+                const probsObj = {
+                    title: probsetTitle,
+                    probset
+                }
+                await saveToLocal("ps", probsObj)
+                console.log(`${probsetTitle}: 문제 ${probset.length}개를 저장했습니다.`)
+                console.log("첫번째 문제를 불러오고 있습니다...")
+
+                await set(probset[0][0])
+                break
+            }
+        }
+
     }
 
     function help(commands: { [key: string]: Command }) {
@@ -495,6 +622,19 @@ x: watch 모드를 종료합니다. (Ctrl + C 와 동일)`,
             desc: `현재 문제를 구글에서 검색합니다. (링크 제공)`,
             func: () => console.log(`https://www.google.com/search?q=%EB%B0%B1%EC%A4%80+${that.user.getQnum()}+${encodeURIComponent(that.findLang()?.name ?? "")}`),
             alias: "g",
+        },
+        "probset": {
+            desc: `URL로부터 백준 문제들을 불러옵니다.
+사용법:
+probset <url> <title?> - url 내 존재하는 백준문제 하이퍼링크들을 파싱해 title 이름으로 문제 셋을 지정합니다.
+probset set <number> (or probset s) - n번째 문제를 선택합니다.
+probset clear (or probset c)- 저장된 문제 셋을 초기화합니다. 
+probset next (or probset n) - 다음 문제로 넘어갑니다.
+probset prev (or probset p) - 이전 문제로 넘어갑니다.
+probset list (or probset l) - 문제 셋 내 문제 리스트와 현재 선택된 문제를 보여줍니다.
+`,
+            func: probset,
+            alias: "ps",
         }
     }
 
