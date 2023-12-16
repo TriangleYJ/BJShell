@@ -210,5 +210,24 @@ export function getSubmissionId(html: string): number {
     if (!isNaN(val)) return val
     return -1
 }
-// (async () => {
-//     console.log(await getLanguage())})()
+
+export async function getProblemSet(url: string): Promise<[qnum: number, title: string][]> {
+    const probset: [qnum: number, title: string][] = []
+    const [sts, html] = await get("", undefined, url)
+    if (sts === 200) {
+        const $ = cheerio.load(html)
+        // parse number and title from anchor tag
+        for (let a of $('a')) {
+            const href = $(a).attr('href')
+            if (href) {
+                const m = href.match(/\/problem\/([0-9]+)/)
+                if (m) {
+                    const qnum = parseInt(m[1])
+                    const title = $(a).text()
+                    probset.push([qnum, title])
+                }
+            }
+        }
+    }
+    return probset
+}
