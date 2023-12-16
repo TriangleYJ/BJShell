@@ -333,6 +333,9 @@ ${cmark}
                         `${chalk.green(result.result_name)} | Time: ${result.time} ms | Memory: ${result.memory} KB` :
                         `${chalk.red(result.result_name)}`
                     console.log(info)
+                    const username = await that.user.getUsername()
+                    const langcode = that.findLang()?.num
+                    console.log(`\n=> ${conf.URL}status?problem_id=${question!.qnum}&user_id=${username}&language_id=${langcode}&result_id=-1`)
                     break
                 }
                 process.stdout.write(`${result.result_name} (${sec} s passed)`); // end the line
