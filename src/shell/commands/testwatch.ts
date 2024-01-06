@@ -5,6 +5,8 @@ import { existsSync } from "fs";
 import chokidar from "chokidar";
 import chalk from "chalk";
 import submit from "./submit";
+import probset_select from "./probset/select";
+import probset_list from "./probset/list";
 
 export default function testwatch(that: BJShell, arg: string[]) {
   return async () => {
@@ -46,6 +48,19 @@ export default function testwatch(that: BJShell, arg: string[]) {
       } else if (data.name === "b") {
         console.log();
         await submit(that, arg)();
+      } else if (data.name === "n") {
+        console.log();
+        await that.revertlineModeFromKeypress();
+        await probset_select(that, arg)(true);
+        await testwatch(that, arg)();
+      } else if (data.name === "p") {
+        console.log();
+        await that.revertlineModeFromKeypress();
+        await probset_select(that, arg)(false);
+        await testwatch(that, arg)();
+      } else if (data.name === "l") {
+        console.log();
+        await probset_list(that, arg)();
       }
     });
 

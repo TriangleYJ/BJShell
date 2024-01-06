@@ -94,9 +94,12 @@ SIGINT(Ctrl+C)만 처리됩니다. 파이프 등 복잡한 쉘 기능은 지원�
     },
     watch: {
       desc: `test 명령어와 동일하지만, 파일 변동을 감지하여 자동으로 테스트를 재실행합니다.
-watch 모드에서는 "b" 와 "x" 명령어를 사용할 수 있습니다.
+watch 모드를 나가지 않고 자주 사용되는 명령어를 쓸 수 있습니다.
 b: 즉시 제출합니다. (submit 명령어와 동일)
-x: watch 모드를 종료합니다. (Ctrl + C 와 동일)`,
+x: watch 모드를 종료합니다. (Ctrl + C 와 동일)
+n: probset next 명령어와 동일합니다.
+p: probset prev 명령어와 동일합니다.
+l: probset list 명령어와 동일합니다.`,
       func: testwatch(that, arg),
       alias: "w",
       important: true,
@@ -128,15 +131,18 @@ x: watch 모드를 종료합니다. (Ctrl + C 와 동일)`,
     probset: {
       desc: `URL로부터 백준 문제들을 불러옵니다.
 사용법:
-probset <url> <title?> - url 내 존재하는 백준문제 하이퍼링크들을 파싱해 title 이름으로 문제 셋을 지정합니다.
+probset <url> <title?> - url 내 존재하는 백준문제
+  하이퍼링크들을 파싱해 title 이름으로 문제 셋을 지정합니다.
 probset set <number> (or probset s) - n번째 문제를 선택합니다.
 probset clear (or probset c)- 저장된 문제 셋을 초기화합니다. 
 probset next (or probset n) - 다음 문제로 넘어갑니다.
 probset prev (or probset p) - 이전 문제로 넘어갑니다.
-probset list (or probset l) - 문제 셋 내 문제 리스트와 현재 선택된 문제를 보여줍니다.
+probset list (or probset l) - 문제 셋 내 문제 리스트와
+  현재 선택된 문제를 보여줍니다.
 `,
       func: probset(that, arg),
       alias: "ps",
+      important: true,
     },
   };
 
