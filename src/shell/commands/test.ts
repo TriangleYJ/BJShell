@@ -71,7 +71,8 @@ export default function test(that: BJShell, arg: string[]) {
           chalk.red(`${prefix}${i} : 시간 초과! ⏰ ( > ${timelimit} sec )`)
         );
       else if (result.status !== 0) {
-        console.log(chalk.red(`${prefix}${i} : 에러! ⚠`));
+        const sigsuffix = result.signal ? ` (${result.signal})` : "";
+        console.log(chalk.red(`${prefix}${i} : 런타임 에러!${sigsuffix}`));
         console.log(result.stderr?.toString());
       } else {
         const actual = String(result.stdout).replace(/\r\n/g, "\n");
