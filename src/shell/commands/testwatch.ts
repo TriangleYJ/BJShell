@@ -26,8 +26,12 @@ export default function testwatch(that: BJShell, arg: string[]) {
       console.log(filepath);
       const monitor = chokidar.watch(filepath, { persistent: true });
       that.monitor = monitor;
+      let test_lock = false;
       monitor.on("change", async function (f) {
         if (f.includes(`${question.qnum}${extension}`)) {
+          if(test_lock) return;
+          test_lock = true;
+          await new Promise((resolve) => setTimeout(resolve, 200));
           console.log();
           console.log(
             chalk.yellow(
@@ -37,6 +41,7 @@ export default function testwatch(that: BJShell, arg: string[]) {
             )
           );
           await test(that, arg)(true);
+          test_lock = false;
         }
       });
       resolveFunc(0);

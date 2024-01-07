@@ -48,11 +48,14 @@ export default function test(that: BJShell, arg: string[]) {
           : "테스트 #";
       const t = testcases[i];
       const expected = t.output.replace(/\r\n/g, "\n");
-      // default timelimit: stat.timelimit * 2
-      // TODO: timelimit from language
-      // FIXME: 0.5 become 0 second
-      const timelimit: number =
-        parseInt((question.stat.timelimit.match(/\d+/) ?? ["2"])[0]) * 2;
+      const timeCondMatch = lang.timelimit.match(/×(\d+)(\+(\d+))?/);
+      const timeCondMul = timeCondMatch ? parseInt(timeCondMatch[1]) : 1;
+      const timeCondAdd = timeCondMatch ? parseInt(timeCondMatch[3]) : 0;
+
+      const rawTimelimit: number =
+        parseFloat((question.stat.timelimit.match(/\d+(\.\d+)?/) ?? ["2"])[0]);
+      const timelimit = timeCondMul * rawTimelimit + timeCondAdd;
+      
       // FIXME: javascript error - using /dev/stdin returns ENXIO: no such device or address, open '/dev/stdin'
       const result = spawnSync(
         lang.run.split(" ")[0],
