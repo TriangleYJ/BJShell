@@ -1,6 +1,6 @@
 import { BJShell } from "@/shell";
 import test from "./test";
-import checkInfo from "../checkInfo";
+import { checkInfo, getFilePath } from "../utils";
 import { existsSync } from "fs";
 import chokidar from "chokidar";
 import chalk from "chalk";
@@ -14,22 +14,16 @@ export default function testwatch(that: BJShell, arg: string[]) {
     if (!info) return;
     const [question, lang] = info;
     console.log(`===== Test: ${question.qnum}. ${question.title} =====`);
-    const extension = lang.extension ?? "";
-    const filepath = `${process.cwd()}/${question.qnum}${extension}`;
-
-    if (!existsSync(filepath)) {
-      console.log("파일이 존재하지 않습니다!");
-      return;
-    }
-
+    const filepath = await getFilePath(that);
+    if (!filepath) return;
     await new Promise((resolveFunc) => {
       console.log(filepath);
       const monitor = chokidar.watch(filepath, { persistent: true });
       that.monitor = monitor;
       let test_lock = false;
       monitor.on("change", async function (f) {
-        if (f.includes(`${question.qnum}${extension}`)) {
-          if(test_lock) return;
+        if (f === filepath) {
+          if (test_lock) return;
           test_lock = true;
           await new Promise((resolve) => setTimeout(resolve, 200));
           console.log();

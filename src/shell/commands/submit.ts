@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { BJShell } from "@/shell";
-import checkInfo from "../checkInfo";
+import { checkInfo, getFilePath } from "../utils";
 import fs from "fs/promises";
 import conf from "@/config";
 
@@ -12,9 +12,8 @@ export default function submit(that: BJShell, arg: string[]) {
     that.r.pause();
     try {
       console.log(`===== 제출: ${question!.qnum}. ${question!.title} =====`);
-      const filepath = `${process.cwd()}/${that.user.getQnum()}${
-        that.findLang()?.extension ?? ""
-      }`;
+      const filepath = await getFilePath(that);
+      if(!filepath) return;
       const code = await fs.readFile(filepath, "utf-8");
       const subId = await that.user.submit(code);
       if (subId === -1) return;
