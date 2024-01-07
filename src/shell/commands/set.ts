@@ -5,6 +5,8 @@ import { exec } from "child_process";
 import { getProblem, setLanguageCommentMark } from "@/net/parse";
 import { readTemplateFromLocal } from "@/storage/filereader";
 import { writeFile, writeMDFile } from "@/storage/filewriter";
+import { generateFilePath, getFilePath } from "../utils";
+import { get } from "@/net/fetch";
 
 export default function set(that: BJShell, arg: string[]) {
   return async (num?: number) => {
@@ -71,7 +73,9 @@ ${cmark}
       : "";
     await writeMDFile(question);
     const extension = lang.extension ?? "";
-    const filepath = `${process.cwd()}/${question.qnum}${extension}`;
+    let filepath = await getFilePath(that, true);
+    if(!filepath) 
+      filepath = await generateFilePath(that);
     const langTemplate = (await readTemplateFromLocal(extension)) ?? "";
 
     if (await writeFile(filepath, commentHeader + langTemplate))
@@ -79,6 +83,6 @@ ${cmark}
         `${chalk.green(filepath)}에 새로운 답안 파일을 생성했습니다.`
       );
     else console.log("파일이 존재합니다! 이전 파일을 불러옵니다.");
-    exec(`code ${filepath}`);
+    exec(`code ${filepath.replace(/ /g, "\\ ")}`);
   };
 }

@@ -4,7 +4,7 @@ import { writeMainTmp } from "@/storage/filewriter";
 import { spawnSync } from "child_process";
 import conf from "@/config";
 import chalk from "chalk";
-import checkInfo from "../checkInfo";
+import { checkInfo, getFilePath } from "../utils";
 
 export default function test(that: BJShell, arg: string[]) {
   return async (hideTitle?: boolean) => {
@@ -15,7 +15,8 @@ export default function test(that: BJShell, arg: string[]) {
       console.log(`===== 테스트: ${question.qnum}. ${question.title} =====`);
     let success: number = 0;
     const extension = lang.extension ?? "";
-    const filepath = `${process.cwd()}/${question.qnum}${extension}`;
+    const filepath = await getFilePath(that);
+    if(!filepath) return;
     if (!(await writeMainTmp(filepath, extension))) return;
 
     // ask compile
