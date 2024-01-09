@@ -74,7 +74,10 @@ export default function test(that: BJShell, arg: string[]) {
       else if (result.status !== 0) {
         const sigsuffix = result.signal ? ` (${result.signal})` : "";
         console.log(chalk.red(`${prefix}${i} : 런타임 에러!${sigsuffix}`));
-        console.log(result.stderr?.toString());
+        const out = result.stdout?.toString();
+        const err = result.stderr?.toString();
+        if(out) console.log(out);
+        if(err) console.log(err);
       } else {
         const actual = String(result.stdout).replace(/\r\n/g, "\n");
         if (actual.trim() == expected.trim()) {
