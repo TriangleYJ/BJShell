@@ -80,7 +80,12 @@ export default function test(that: BJShell, arg: string[]) {
         if(err) console.log(err);
       } else {
         const actual = String(result.stdout).replace(/\r\n/g, "\n");
-        if (actual.trim() == expected.trim()) {
+        if(actual.length > 3 * expected.length) {
+          console.log(
+            chalk.red(`${prefix}${i} : 출력 초과! 📜 ( ${actual.length} letters )`)
+          );
+        } else if(t.regex && new RegExp(expected.trim()).test(actual.trim())
+          || (!t.regex && actual.trim() == expected.trim())) {
           console.log(chalk.green(`${prefix}${i} : 통과! ✅`));
           success += 1;
         } else {

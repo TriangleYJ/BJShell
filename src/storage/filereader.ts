@@ -22,11 +22,12 @@ export async function parseTestCasesFromLocal(path: string) {
     >>	    I	    E   	E	    f=1,(2)
     (other)	I	    I	    (3)	    (4)	
      */
-    const testcases: { input: string, output: string }[] = []
+    const testcases: { input: string, output: string, regex?: boolean}[] = []
     const lines = file.split('\n')
     let input = ''
     let output = ''
     let flag = 0
+    let regexmode = false;
     let srtpos = 0
     const syntaxError = (msg: string, lineidx: number) => {
         console.log(`BJTestcase Syntax Error: ${msg} in line ${lineidx}`)
@@ -41,21 +42,22 @@ export async function parseTestCasesFromLocal(path: string) {
                 flag = 2
             }
         }
-        else if (line.endsWith('--')) {
-            if (flag % 2 === 1) return syntaxError('--', lineidx)
+        else if (line.endsWith('--') || line.endsWith('==')) {
+            regexmode = line.endsWith('==')
+            if (flag % 2 === 1) return syntaxError('-- or ==', lineidx)
             else if (flag === 2) {
-                srtpos = line.indexOf('--')
+                srtpos = regexmode ? line.indexOf('==') : line.indexOf('--')
                 flag = 3
             }
-
         }
         else if (line.endsWith('>>')) {
             if (flag === 1 || flag === 2) return syntaxError('>>', lineidx)
             else if (flag === 3) {
                 flag = 1
-                testcases.push({ input: input, output: output.replace(/\n$/, '') })
+                testcases.push({ input: input, output: output.replace(/\n$/, ''), regex: regexmode })
                 input = ''
                 output = ''
+                regexmode = false
             }
         }
         else if (line.toLowerCase().endsWith('<bjtestcase>')) {

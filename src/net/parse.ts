@@ -19,7 +19,7 @@ export interface problem {
     prob: string,
     input_explain: string,
     output_explain: string,
-    testcases: { input: string, output: string, explain?: string }[]
+    testcases: { input: string, output: string, explain?: string, regex?: boolean }[]
     hint?: string,
     problem_limit?: string,
     html: string
