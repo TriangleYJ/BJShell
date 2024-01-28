@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import config from '@/config'
+import chalk from 'chalk'
 
 export async function parseTestCasesFromLocal(path: string) {
     const file = await fs.readFile(path, 'utf-8')
@@ -30,7 +31,7 @@ export async function parseTestCasesFromLocal(path: string) {
     let regexmode = false;
     let srtpos = 0
     const syntaxError = (msg: string, lineidx: number) => {
-        console.log(`BJTestcase Syntax Error: ${msg} in line ${lineidx}`)
+        console.log(`${chalk.red('⚠️  테스트를 불러오지 못했습니다:')} BJTestcase Syntax Error: ${msg} in line ${lineidx}`)
         return []
     }
     for (let lineidx = 0; lineidx < lines.length; lineidx++) {

@@ -48,7 +48,7 @@ export default function test(that: BJShell, arg: string[]) {
           ? "(커스텀) 테스트 #"
           : "테스트 #";
       const t = testcases[i];
-      const expected = t.output.replace(/\r\n/g, "\n");
+      const expected = t.output.replace(/\r\n/g, "\n").trim();
       const timeCondMatch = lang.timelimit.match(/×(\d+)(\+(\d+))?/);
       const timeCondMul = timeCondMatch ? parseInt(timeCondMatch[1]) : 1;
       const timeCondAdd = timeCondMatch ? parseInt(timeCondMatch[3]) : 0;
@@ -67,10 +67,20 @@ export default function test(that: BJShell, arg: string[]) {
           timeout: timelimit * 1000,
         }
       );
-      if (result.signal === "SIGTERM")
-        console.log(
-          chalk.red(`${prefix}${i} : 시간 초과! ⏰ ( > ${timelimit} sec )`)
-        );
+      if (result.signal === "SIGTERM") {
+        if(result?.error?.message.endsWith("ETIMEDOUT"))
+          console.log(
+            chalk.red(`${prefix}${i} : 시간 초과! ⏰ ( > ${timelimit} sec )`), 
+          );
+        else if(result?.error?.message.endsWith("ENOBUFS"))
+          console.log(
+            chalk.red(`${prefix}${i} : 출력 초과! 📜 ( > 200KB )`),
+          );
+        else
+          console.log(
+            chalk.red(`${prefix}${i} : 테스트를 실행할 수 없습니다! ( 에러: ${result?.error?.message} )`),
+          );
+      }
       else if (result.status !== 0) {
         const sigsuffix = result.signal ? ` (${result.signal})` : "";
         console.log(chalk.red(`${prefix}${i} : 런타임 에러!${sigsuffix}`));
@@ -79,19 +89,21 @@ export default function test(that: BJShell, arg: string[]) {
         if(out) console.log(out);
         if(err) console.log(err);
       } else {
-        const actual = String(result.stdout).replace(/\r\n/g, "\n");
-        if(actual.length > 3 * expected.length) {
+        const actual = String(result.stdout).replace(/\r\n/g, "\n").trim();
+        const regsuf = t.regex ? " (regex)" : "";
+        // for debugging, we set the limit to 100
+        if(actual.length > Math.max(3 * expected.length, 100)) {
           console.log(
             chalk.red(`${prefix}${i} : 출력 초과! 📜 ( ${actual.length} letters )`)
           );
-        } else if(t.regex && new RegExp(expected.trim()).test(actual.trim())
-          || (!t.regex && actual.trim() == expected.trim())) {
-          console.log(chalk.green(`${prefix}${i} : 통과! ✅`));
+        } else if(t.regex && new RegExp(expected).test(actual)
+          || (!t.regex && actual == expected)) {
+          console.log(chalk.green(`${prefix}${i} : 통과! ✅${regsuf}`));
           success += 1;
         } else {
           console.log(chalk.red(`${prefix}${i} : 실패! ❌`));
-          console.log(`예상 정답: ${expected.trim()}`);
-          console.log(`실행 결과: ${actual.trim()}`);
+          console.log(`예상 정답: ${expected}${regsuf}`);
+          console.log(`실행 결과: ${actual}`);
         }
       }
     }
