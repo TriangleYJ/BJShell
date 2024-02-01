@@ -147,6 +147,7 @@ export class BJShell {
         await this.revertlineModeFromKeypress();
       } else if (this.cp === null) {
         console.log();
+        await this.revertlineModeFromKeypress();
         this.r.write(null, { ctrl: true, name: "u" });
         await this.setPrompt();
       } else

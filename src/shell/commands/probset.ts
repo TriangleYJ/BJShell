@@ -8,10 +8,6 @@ import probset_clear from "./probset/clear";
 export default function probset(that: BJShell, arg: string[]) {
   return async () => {
     switch (arg[0]) {
-      case "set":
-      case "s":
-        await probset_set(that, arg)();
-        break;
       case "clear":
       case "c":
         await probset_clear(that, arg)();

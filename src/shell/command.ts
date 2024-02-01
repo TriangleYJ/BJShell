@@ -105,9 +105,7 @@ l: probset list 명령어와 동일합니다.`,
       important: true,
     },
     lang: {
-      desc: `사용 가능한 언어를 보여줍니다. 언어를 설정하려면 lang <언어 번호> 를 타이핑하세요.
-사용법: lang list or lang list <column number>
-사용법: lang <language number>`,
+      desc: `방향키를 이용해 사용할 언어를 선택합니다.`,
       func: lang(that, arg),
       alias: "l",
       important: true,
