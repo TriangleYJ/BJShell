@@ -129,14 +129,12 @@ l: probset list 명령어와 동일합니다.`,
     probset: {
       desc: `URL로부터 백준 문제들을 불러옵니다.
 사용법:
-probset <url> <title?> - url 내 존재하는 백준문제
+probset - 문제 셋 내 문제 목록을 보고 방향 키를 통해 선택합니다.
+probset create <url> <title?> (or probset c) - url 내 존재하는 백준문제
   하이퍼링크들을 파싱해 title 이름으로 문제 셋을 지정합니다.
-probset set <number> (or probset s) - n번째 문제를 선택합니다.
-probset clear (or probset c)- 저장된 문제 셋을 초기화합니다. 
+probset clear (or probset l)- 저장된 문제 셋을 초기화합니다. 
 probset next (or probset n) - 다음 문제로 넘어갑니다.
 probset prev (or probset p) - 이전 문제로 넘어갑니다.
-probset list (or probset l) - 문제 셋 내 문제 리스트와
-  현재 선택된 문제를 보여줍니다.
 `,
       func: probset(that, arg),
       alias: "ps",

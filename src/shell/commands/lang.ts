@@ -8,7 +8,7 @@ export default function lang(that: BJShell, arg: string[]) {
     const langs = await getLanguages();
     const langChoices = langs.map(lang => `${lang.name} (${lang.extension})`);
     const userLangIdx = langs.findIndex(lang => lang.num === that.user.getLang());
-    const selected = await gridSelector(that, langChoices, userLangIdx);
+    const selected = await gridSelector(that, langChoices, userLangIdx, `전체 언어 목록 (${langs.length}개)`);
     if(selected !== userLangIdx){
       const lang = langs[selected];
       await that.user.setLang(lang.num);

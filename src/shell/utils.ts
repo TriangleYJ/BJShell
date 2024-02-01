@@ -53,12 +53,14 @@ export async function getFilePath(
 export function gridSelector(
   that: BJShell,
   choices: string[],
-  selected?: number
+  selected?: number,
+  title?: string
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     if (choices.length === 0) reject("[ERROR] gridSelector - No choices");
     if (selected && selected >= choices.length)
       reject("[ERROR] gridSelector - Selected out of range");
+    if(selected && selected < 0) selected = undefined;
 
     const term_width = process.stdout.columns ?? 80;
     const term_height = process.stdout.rows ?? 24;
@@ -73,6 +75,11 @@ export function gridSelector(
     }
 
     // 1. calculate the number of columns
+    const koreanLen = (str: string) => {
+     // Korean characters are wider than English characters
+      const korean = str.match(/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g);
+      return Math.floor((korean?.length ?? 0)) + str.length;
+    }
     let colnum = 1;
     for (let max_colnum = 1; max_colnum <= choices.length; max_colnum++) {
       const max_colsizes = [];
@@ -80,8 +87,8 @@ export function gridSelector(
         let max_colsize = 0;
         for (let row = 0; ; row++) {
           const choice = choices[row * max_colnum + col];
-          if (choice && choice.length > max_colsize)
-            max_colsize = choice.length;
+          if (choice && koreanLen(choice) > max_colsize)
+            max_colsize = koreanLen(choice);
           else if (choice === undefined) break;
         }
         max_colsizes.push(max_colsize);
@@ -95,7 +102,9 @@ export function gridSelector(
       if (max_colnum === choices.length) colnum = max_colnum;
     }
     const rownum = Math.ceil(choices.length / colnum);
-    const rowInOnePage = Math.max(Math.ceil((term_height - 3) / 2), 1);
+    // ASSUME no linebreak in title
+    const extraLen = title ? 2 + title.split("\n").length : 1;
+    const rowInOnePage = Math.max(Math.ceil((term_height - extraLen - 2) / 2), 1);
 
     // 2. make grid
     let selectedRowIndex = -1,
@@ -148,13 +157,14 @@ export function gridSelector(
 
       const totalPage = Math.ceil(gridChoices.length / rowInOnePage);
       const pageText = chalk.bgYellow(`[Page ${page + 1}/${totalPage}]`);
-      const helperText = `${pageText}  Use ${chalk.yellow(
-        "arrow keys"
-      )} to navigate, ${chalk.yellow("enter")} to select, ${chalk.yellow(
+      const helperText = `${pageText} 이동할때는 ${chalk.yellow(
+        "방향키"
+      )}, 선택할 때는 ${chalk.yellow("엔터")}, 취소할 때는 ${chalk.yellow(
         "x"
-      )} to cancel`;
+      )} 를 눌러주세요.`;
 
       const output = table(data, {
+        header: title ? { content: title, alignment: "center" } : undefined,
         border: getBorderCharacters("norc"),
         columns: gridChoices[0].map(() => ({
           alignment: "center",
@@ -164,6 +174,9 @@ export function gridSelector(
     }
 
     drawGrid();
+
+
+    // 4. listen to keypress
     that.changelineModeToKeypress(async (key, data) => {
       const name = data.name;
       if (name === "up" && selectedRowIndex > 0) {
