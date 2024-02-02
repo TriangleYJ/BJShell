@@ -1,11 +1,14 @@
 import { BJShell } from "@/shell";
 import conf from "@/config";
 import { exec } from "child_process";
+import { loadFromLocal } from "@/storage/localstorage";
 
 export default function show(that: BJShell, arg: string[]) {
-  return () => {
-    exec(`code ${conf.MDPATH}`);
-    if (that.firstshow) {
+  return async () => {
+    const openProbCmdRaw = await loadFromLocal("openProbCmd");
+    const openProbCmd = (openProbCmdRaw ?? "code {}").replace("{}", conf.MDPATH);
+    exec(openProbCmd);
+    if (!openProbCmdRaw && that.firstshow) {
       that.firstshow = false;
       console.log("VSCode에 문제 파일을 열었습니다.");
       console.log(

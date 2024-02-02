@@ -7,6 +7,8 @@ import { readTemplateFromLocal } from "@/storage/filereader";
 import { writeFile, writeMDFile } from "@/storage/filewriter";
 import { generateFilePath, getFilePath } from "../utils";
 import { get } from "@/net/fetch";
+import config from "@/config";
+import { loadFromLocal } from "@/storage/localstorage";
 
 export default function set(that: BJShell, arg: string[]) {
   return async (num?: number) => {
@@ -83,6 +85,13 @@ ${cmark}
         `${chalk.green(filepath)}에 새로운 답안 파일을 생성했습니다.`
       );
     else console.log("파일이 존재합니다! 이전 파일을 불러옵니다.");
-    exec(`code ${filepath.replace(/ /g, "\\ ")}`);
+    const filepathEscaped = filepath.replace(/ /g, "\\ ");
+    const openAnsCmd = (await loadFromLocal("openAnsCmd") ?? "code {}").replace("{}", filepathEscaped);
+    exec(openAnsCmd);
+    const openProbCmdRaw = await loadFromLocal("openProbCmd");
+    if(openProbCmdRaw) {
+      const openProbCmd = openProbCmdRaw.replace("{}", conf.MDPATH);
+      exec(openProbCmd);
+    }
   };
 }
