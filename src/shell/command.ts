@@ -11,6 +11,7 @@ import show from "./commands/show";
 import submit from "./commands/submit";
 import exec from "./commands/exec";
 import testwatch from "./commands/testwatch";
+import term from "./commands/term";
 
 export interface Command {
   desc: string;
@@ -125,6 +126,10 @@ l: probset list 명령어와 동일합니다.`,
           )}`
         ),
       alias: "g",
+    },
+    term: {
+      desc: `터미널 모드 설정을 변경합니다.`,
+      func: term(that, arg),
     },
     probset: {
       desc: `URL로부터 백준 문제들을 불러옵니다.
