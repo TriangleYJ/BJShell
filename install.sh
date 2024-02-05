@@ -15,7 +15,7 @@ else
     exit 1
 fi
 
-cat << EOF > /usr/local/bin/bjt &&
+cat << EOF | sudo tee /usr/local/bin/bjt > /dev/null &&
 tmux new-session -d -s bjshell \; \
   split-window -v -p 25 \; \
   select-pane -t 0 \; \
