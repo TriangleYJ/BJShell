@@ -89,14 +89,18 @@ export default function test(that: BJShell, arg: string[]) {
         if(out) console.log(out);
         if(err) console.log(err);
       } else {
-        const actual = String(result.stdout).replace(/\r\n/g, "\n").trim();
+        const actual = String(result.stdout).replace(/\r\n/g, "\n")
+          .split("\n").map(x => x.trim()).join("\n").trim();
         const regsuf = t.regex ? " (regex)" : "";
+
+        // TODO: maybe unnessary?
         // for debugging, we set the limit to 100
-        if(actual.length > Math.max(3 * expected.length, 100)) {
-          console.log(
-            chalk.red(`${prefix}${i} : 출력 초과! 📜 ( ${actual.length} letters )`)
-          );
-        } else if(t.regex && new RegExp(expected).test(actual)
+        // if(actual.length > Math.max(3 * expected.length, 100)) {
+        //   console.log(
+        //     chalk.red(`${prefix}${i} : 출력 초과! 📜 ( ${actual.length} letters )`)
+        //   );
+        // }
+        if(t.regex && new RegExp(expected).test(actual)
           || (!t.regex && actual == expected)) {
           console.log(chalk.green(`${prefix}${i} : 통과! ✅${regsuf}`));
           success += 1;
