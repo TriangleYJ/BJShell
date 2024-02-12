@@ -115,6 +115,10 @@ export class BJShell {
   async changelineModeToKeypress(
     keypressListener: (key: string, data: any) => Promise<void>
   ) {
+    if(this?.keyeventListener) {
+      console.log(chalk.red("Already in keypress mode! override previous listener."));
+      await this.revertlineModeFromKeypress();
+    } 
     this.r.removeListener("line", this.lineListener);
     readline.emitKeypressEvents(process.stdin);
     process.stdin.setRawMode(true);
@@ -132,6 +136,8 @@ export class BJShell {
     }
     this.r.write(null, { ctrl: true, name: "u" });
     await this.setPrompt();
+    // re-register line listener (assure 1 listener)
+    this.r.removeListener("line", this.lineListener);
     this.r.on("line", this.lineListener);
   }
 
@@ -140,6 +146,9 @@ export class BJShell {
     this.r.on("close", function () {
       process.exit();
     });
+    this.r.setMaxListeners(1);
+    // onkeypress listener is already registered
+    process.stdin.setMaxListeners(2);
 
     // Handle Ctrl+C (SIGINT) to send it to the child process
     this.r.on("SIGINT", async () => {

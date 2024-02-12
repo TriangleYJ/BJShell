@@ -57,9 +57,6 @@ export default function testwatch(that: BJShell, arg: string[]) {
         await that.revertlineModeFromKeypress();
         await probset_select(that, arg)(false);
         await testwatch(that, arg)();
-      } else if (data.name === "l") {
-        console.log();
-        await probset_list(that, arg)();
       }
     });
 
