@@ -7,6 +7,7 @@ export default {
     USER: 'user/',
     SUBMIT: 'submit/',
     SUBMITSTAT: 'status/ajax',
+    SUBMITSTATWS: 'wss://ws-ap1.pusher.com/app/a2cb611847131e062b32?protocol=7&client=js&version=4.2.2&flash=false',
     MODIFY: 'modify',
     LANGURL: 'https://help.acmicpc.net/language/info',
     MDPATH: `${os.homedir()}/.bjshell/problem.md`,

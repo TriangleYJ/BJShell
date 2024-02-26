@@ -29,6 +29,7 @@
     "tsconfig-paths": "^4.2.0"
   },
   "dependencies": {
+    "@types/ws": "^8.5.10",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0-rc.12",
     "chokidar": "^3.5.3",
@@ -36,6 +37,7 @@
     "node-fetch": "^2.7.0",
     "node-html-markdown": "^1.3.0",
     "table": "^6.8.1",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "ws": "^8.16.0"
   }
 }
