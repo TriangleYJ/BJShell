@@ -1,7 +1,9 @@
 import conf from '@/config';
 import WebSocket from 'ws';
 
-export default function subscribeChannel(id: number, terminateFunc: (data: any) => boolean, doFunc: (data: any) => void) {
+let eventCnt = 0;
+
+export default function subscribeChannel(id: number, terminateFunc: (data: any) => boolean, doFunc: (data: any) => void, termCheckAgainFunc?: (data: any) => boolean) {
     return new Promise(resolve => {
         const data = {
             event: 'pusher:subscribe',
@@ -25,16 +27,27 @@ export default function subscribeChannel(id: number, terminateFunc: (data: any) 
         socket.addEventListener('message', (event) => {
             const parsedObj = JSON.parse(event.data.toString());
             const data = JSON.parse(parsedObj.data);
-            if(parsedObj.event === 'update') {
-                if(terminateFunc(data)) {
-                    clearTimeout(timeout);
-                    socket.close();
-                    resolve(data);
-                }
+            if (parsedObj.event === 'update') {
+                eventCnt++;
                 doFunc(data);
+                if (terminateFunc(data)) {
+                    if (termCheckAgainFunc && termCheckAgainFunc(data)) {
+                        const tmpEventCnt = eventCnt;
+                        setTimeout(() => {
+                            if (eventCnt !== tmpEventCnt) return;                            
+                            clearTimeout(timeout);
+                            socket.close();
+                            resolve(data);
+                        }, 5000);
+                    } else {
+                        clearTimeout(timeout);
+                        socket.close();
+                        resolve(data);
+                    }
+                }
             }
-            
+
         });
     })
-    
+
 }
