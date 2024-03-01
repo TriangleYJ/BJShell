@@ -1,0 +1,51 @@
+name: Update Binary
+
+on:
+  push:
+    branches:
+      - master
+      - feature/github-action
+
+jobs:
+  update-binary:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        binary_platform: [linux-x64, linux-arm64, macos-x64, macos-arm64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install global packages
+        run: |
+          npm install -g typescript tsc-alias pkg
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./build/bjshell-${{ matrix.binary_platform }}
+
+      # - name: Update binary in release
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: https://uploads.github.com/repos/TriangleYJ/BJShell/releases/latest/assets
+      #     asset_path: 
+      #     asset_name: bjshell-${{ matrix.platform }}
+      #     asset_content_type: application/octet-stream
