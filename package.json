@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "bin": "./index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "jest",
-    "dev": "ts-node src"
+    "dev": "ts-node src",
+    "build": "tsc && tsc-alias && cp package.json build && cd build && pkg ."
   },
   "repository": {
     "type": "git",
@@ -24,12 +26,12 @@
     "@types/jest": "^29.5.5",
     "@types/node-fetch": "^2.6.6",
     "@types/watch": "^1.0.5",
+    "@types/ws": "^8.5.10",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
     "tsconfig-paths": "^4.2.0"
   },
   "dependencies": {
-    "@types/ws": "^8.5.10",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0-rc.12",
     "chokidar": "^3.5.3",
