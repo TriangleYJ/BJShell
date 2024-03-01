@@ -12,10 +12,12 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-11]
-        binary_platform: [linux-x64, linux-arm64, macos-x64, macos-arm64]
+        os: [ubuntu-latest, macos-latest]
+        # binary_platform: [linux-x64, linux-arm64, macos-x64, macos-arm64]
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Get the output
         # Echo the `uname` output parameter from the `runcmd` step
@@ -39,11 +41,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: ./build/bjshell-${{ matrix.binary_platform }}
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   with:
+      #     files: ./build/bjshell-${{ matrix.binary_platform }}
 
       # - name: Update binary in release
       #   uses: actions/upload-release-asset@v1
