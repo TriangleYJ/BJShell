@@ -12,12 +12,17 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, macos-11]
         binary_platform: [linux-x64, linux-arm64, macos-x64, macos-arm64]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Get the output
+        # Echo the `uname` output parameter from the `runcmd` step
+        run: |
+          uname -a
+          echo ::set-output name=uname::$(uname -a)
+          echo "The uname output was ${{ steps.runcmd.outputs.uname }}"
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
