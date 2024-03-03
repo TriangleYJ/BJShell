@@ -22,16 +22,13 @@ https://github.com/TriangleYJ/BJShell/releases 에서 확인할 수 있습니다
 6. 우측 표에서 `OnlineJudge` 항목을 찾습니다. 해당 항목 옆 Value 열에 있는 값을 더블클릭 한 뒤 복사합니다. 이후 BJ 쉘에 `Enter login token: ` 가 떠 있을 때 붙여넣고 엔터를 누릅니다.
 7. 우측 표에서 `bojautologin` 항목을 찾습니다. 해당 항목 옆 Value 열에 있는 값을 더블클릭 한 뒤 복사합니다. 이후 BJ 쉘에 `(Optional) Enter autologin token: ` 가 떠있을 때 붙여넣고 엔터를 누릅니다.
 
+## Run
+`npm run dev`
+
 ## Build
-1. `tsc && tsc-alias`
-2. `cp package.json ./build`, Edit `./build/package.json` to
-```
-   ...
-  "main": "index.js",
-  "bin": "./index.js",
-   ...
-```
-3. `pkg -t node16-linux-x64 .` or `pkg -t node16-linux-arm64 .`
+`npm install -g typescript tsc-alias pkg`
+
+`npm run build`
 
 ## License
 This project is licensed under the terms of the MIT license.

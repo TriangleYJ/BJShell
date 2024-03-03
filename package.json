@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "bin": "./index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "jest",
-    "dev": "ts-node src"
+    "dev": "ts-node src",
+    "build": "tsc && tsc-alias && cp package.json build && cd build && pkg ."
   },
   "repository": {
     "type": "git",
