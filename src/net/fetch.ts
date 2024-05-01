@@ -1,5 +1,13 @@
 import config from '@/config'
 import fetch from 'node-fetch'
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { loadFromLocalWithPath } from '@/storage/localstorage';
+
+let __proxy: string | null | undefined = null;
+async function getProxy() {
+    if(__proxy === null) __proxy = await loadFromLocalWithPath(config.CONFPATH, "proxy");
+    return __proxy ? new HttpsProxyAgent(__proxy) : undefined;
+}
 
 export async function getResponse(path: string, cookie?: string, url?: string) {
     //console.log("Fetch called:", url, path)
@@ -9,7 +17,8 @@ export async function getResponse(path: string, cookie?: string, url?: string) {
             "Referer": config.URL,
             "Cookie": cookie ?? ""
         },
-        "method": "GET"
+        "method": "GET",
+        agent: await getProxy(),
     })
 }
 
@@ -23,7 +32,8 @@ export async function postResponse(path: string, body: string, cookie: string, h
             "cookie": cookie ?? ""
         },
         "body": body,
-        "method": "POST"
+        "method": "POST",
+        agent: await getProxy(),
     })
 }
 
